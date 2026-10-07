@@ -1,6 +1,6 @@
 # Assumptions register
 
-Every rule the engine uses that I had to infer rather than read. Each entry says what the rule is, where it came from and how sure I am. Updated at the end of Phase 2 (section G is new).
+Every rule the engine uses that I had to infer rather than read. Each entry says what the rule is, where it came from and how sure I am. Updated at the end of Phase 3 (section H is new).
 
 Status key:
 
@@ -100,3 +100,16 @@ A second Simsaw dataset with a run that uses some of section F (the course's Pro
 | A-42 | Board report "length classes" groups boards by the dataset's named length classes; a board fitting more than one goes to the first, by shortest minimum. | Assumed | Simsaw's report options (simsaw.ini) list none / classified / detailed lengths without saying how "classified" groups. The Ngomi dataset has one length class, so the choice cannot be checked. |
 | A-43 | Combined one-liner and summary figures are volume-weighted: totals of volumes and values over the total log volume; the combined nett value weights each pattern's nett value by its log volume. | Ours | Gives the same answer as sawing all the logs as one batch. |
 | A-44 | Editing a placeholder (price, log price or any kerf on a line) clears its flag; the line's flag can also be set or cleared by hand. | Ours | |
+
+## H. Phase 3: pattern generator
+
+| ID | Rule | Status | Evidence |
+| --- | --- | --- | --- |
+| A-45 | "Thicker boards towards the centre" (default on): moving out from the centre of the cant, and out from the cant across the sideboards, a board is never thicker than the one inside it. | Ours | Every pattern in the Ngomi dataset and the course notes follows it, and it keeps the search to thousands of candidates instead of millions. It can be switched off. |
+| A-46 | The pre-screen only discards clear losers. On the top 60–150 candidates of three classes its order agrees weakly with the full simulation (Spearman 0.2–0.4); the best pattern sat between rank 9 and 51. A 12–16-log stratified sample ranks almost exactly like the whole class (its best was the class's best in all three). So 80 candidates are sawn on a 12-log sample and the best 10 on every log. | Fitted | `tools/prescreen_vs_full.py`. A sweep allowance in the pre-screen made the agreement no better and was dropped. |
+| A-47 | A stack is dropped when another of the thinnest boards (plus a kerf) would fit on each side of it within the cant face at the small end of the smallest log. | Ours | Such a stack leaves a full-length board in the log. Taller stacks are allowed up to the large end of the largest log, because the outer boards still give shorter lengths. |
+| A-48 | Each saw blade costs 0.01 recovery points (R0.01/m³ for the value objective) in the ranking, so of two patterns that saw the same boards the one with fewer blades wins. | Ours | Without it, patterns with sideboards that cut nothing on the smaller logs of a class could top the list. |
+| A-49 | Diameter chart steps use three ideal logs (SED, SED + 0.5 and SED + 0.9 cm) with the dataset's median taper, sweep in mm/m, ovality and length; each step's log price is the price of the class its SED falls in. | Ours | One log per step was too noisy: board lengths step in 0.3 m. |
+| A-50 | Class suggestions use the cross-checked scores: the best three patterns of each step are sawn at every step. A pattern outside that pool can only carry a class over the steps where it was already in the top 10. | Ours | Without the cross-check the suggested classes broke up at nearly every centimetre. |
+| A-51 | "Use these as the log classes" keeps the other limits (length, taper, sweep, ovality, core, accepted grades) of the current first class, and each new class takes the log price of the current class containing its middle diameter. | Ours | Diameter is the only thing the chart decides. |
+| A-52 | "Never cut" switches those products off for the search only. A saved pattern is sawn with the dataset's own product list, so it may yield an excluded size there. | Ours | Said on the generator form. |

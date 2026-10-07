@@ -29,8 +29,11 @@ async function getJSON(url, opts) {
 
 function selection() { return { line: $("line").value, cls: $("cls").value }; }
 
+let prefill = null;   // #p=...&s=... opens a new, unsaved pattern with this notation
+
 function fromHash() {
   const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("p")) prefill = { primary: h.get("p"), secondary: h.get("s") || "" };
   if (h.get("line")) $("line").value = h.get("line");
   if (h.get("class")) {
     const opt = [...$("cls").options].find(o => o.dataset.no === h.get("class"));
@@ -56,7 +59,8 @@ async function loadList(selectId) {
   $("log").value = state.logIndex;
   renderList();
   const pick = state.patterns.find(p => p.id === selectId) || state.patterns[0];
-  if (pick) choose(pick); else newPattern();
+  if (prefill) { newPattern(); $("primary").value = prefill.primary; $("secondary").value = prefill.secondary; prefill = null; refresh(0); }
+  else if (pick) choose(pick); else newPattern();
   $("class-result").innerHTML = "";
 }
 
@@ -355,4 +359,9 @@ $("run-class").onclick = runClass;
 $("save").onclick = () => save(false);
 $("saveas").onclick = () => save(true);
 $("delete").onclick = remove;
+$("card").onclick = () => {
+  const { line, cls } = selection();
+  const q = new URLSearchParams({ line_id: line, class_id: cls, primary: $("primary").value, secondary: $("secondary").value });
+  window.open(`/d/${DS}/card?${q}`, "_blank");
+};
 loadList();

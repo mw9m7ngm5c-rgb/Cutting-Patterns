@@ -1,6 +1,6 @@
 # Sawing pattern simulator and generator: specification
 
-Status: Phase 2 (web app) complete; awaiting sign-off before Phase 3. Phase 1 results are in section 13, Phase 2 in section 14.
+Status: Phase 3 (pattern generator) complete; awaiting sign-off before Phase 4. Results: Phase 1 section 13, Phase 2 section 14, Phase 3 section 15.
 Companion document: `ASSUMPTIONS.md` (every rule here that was inferred rather than read is listed there with its evidence).
 
 ## 1. Purpose
@@ -57,12 +57,14 @@ engine/      standalone package: no web, no database, no file I/O beyond explici
   edging.py      edger, cross-cut, wane test
   generator.py   enumeration, pre-screen, ranking  (Phase 3)
   loggen.py      log generator (seeded ranges and distributions)
+  generator.py   pattern generator, diameter chart, class suggestions
 app/         the web app; calls the engine, never the other way round
   models.py      SQLAlchemy tables (section 6)          db.py        connection, migrations on start
   store.py       database <-> engine, new / import / duplicate datasets
   tables.py      column definitions behind every editable table
   simview.py     pattern-screen diagram and class results
   runs.py        batch runs in a background thread      reports.py   reports and Excel export
+  genjobs.py     generator searches as background jobs  svg.py       diagrams drawn on the server
   snapshot.py    a run's inputs as JSON                 main.py      routes; __main__.py start command
   templates/, static/ (grid.js, pattern.js, app.css), migrations/ (Alembic)
 importers/   Simsaw .mdb import (access-parser)
@@ -193,21 +195,22 @@ SQLite tables mirror the Simsaw schema so that datasets import without loss. A `
 | `setting` | nominal options, disc separation, points per disc, seed, residue prices, % fines. |
 | `run`, `run_*` | A batch run copies every input it used into `run.snapshot` (one JSON document holding exactly the engine inputs: products, wane, classes, logs, lines, patterns, settings), then stores `run_pattern`, `run_log_result` and `run_board_result`. The run saws from its snapshot, not the live tables, and reports read only the run's own tables. Simsaw's separate `run_*` input tables are folded into the snapshot when a run is imported. |
 
-Additions beyond Simsaw: `saw_pattern.source` (manual / imported / generated), `dataset.name` and notes, placeholder flags on product prices, log prices and line kerfs, labels for the primary and secondary machine, `run.source` (app or imported Simsaw results) and run status and progress. Generator job tables arrive in Phase 3.
+Additions beyond Simsaw: `saw_pattern.source` (manual / imported / generated), `dataset.name` and notes, placeholder flags on product prices, log prices and line kerfs, labels for the primary and secondary machine, `run.source` (app or imported Simsaw results) and run status and progress. `generator_job` (Phase 3) holds each search: its form, a snapshot of the inputs, progress and the ranked results.
 
 ## 7. Generator
 
-For a production line and a log class, or a single diameter.
+`engine/generator.py`, for a production line and a log class, or a single diameter (three ideal logs across the 1 cm step).
 
-1. **Enumerate.** For each valid cant width: for 0..N sideboards per side from the valid thicknesses; for each secondary stack of valid thicknesses whose wet height plus kerfs fits the available cant face at the class's diameters. Symmetric-only (default) roughly square-roots the search space.
-2. **Constrain.** Maximum blades per saw, maximum distinct thicknesses, must-include and exclude products, minimum share of a target product, centre boards only at full cant width.
-3. **Pre-screen.** Score each candidate on a straight, untapered cylinder at three diameters in the class (minimum, middle, maximum) using a closed-form chord calculation. Keep the best few hundred.
-4. **Simulate.** Run the full engine on the class's logs for the survivors.
-5. **Rank.** By dry volume recovery, nett value recovery or volume of a target product. Show the top 10 with recovery, value, boards per log, product mix and diagram.
-6. **Diameter chart.** Repeat at each 1 cm step across the diameter range, show the best pattern per step, and suggest class boundaries where the best pattern changes.
-7. **Saw setting card.** One printable page per pattern: diagram, blade positions as cumulative wet distances from the centreline, kerfs, expected boards per log, expected recovery.
+1. **Enumerate.** Every allowed cant width; 0 to N sideboards a side; every secondary stack of usable thicknesses (a thickness with at least one valid product) whose wet height plus kerfs fits the largest log in the class at its large end. With "fill the face" (always on) a stack is dropped if another of the thinnest boards would still fit on each side of it at the small end of the smallest log.
+2. **Constrain while enumerating.** Symmetric only (default on: same sideboards both sides, secondary reads the same both ways); thicker boards towards the centre (default on); most sideboards a side (2); most blades on each saw; most different thicknesses (3); cant widths to try; products the pattern must yield (their thickness must appear); products never to cut (switched off for the search). The class searches for Ngomi build 2 000 to 13 000 candidates.
+3. **Pre-screen** every candidate on straight, round, tapered logs at the smallest, median and largest small-end diameter of the class, with the median length and taper. Closed form: for each flitch and width the smallest log radius at which the board passes the wane test is found once; the clear length then runs from there to the large end. It follows the engine's rules for widths, centre boards, valid lengths and resaw. It discards clear losers; near the top its order is rough (ASSUMPTIONS A-46).
+4. **Simulate** the best 80 with the full engine on a stratified sample of 12 logs of the class, then the best 10 on every log. A minimum share of the target product and "must yield" are checked on these real results.
+5. **Rank** by dry volume recovery, nett value recovery or volume of a target product, less a token 0.01 points per saw blade so a blade that changes nothing never wins a tie. Show the top 10 with recovery, nett value, boards per log, average length, product mix, blades and a diagram of the class's middle log.
+6. **Diameter chart.** The same search at each 1 cm step of a diameter range, on three ideal logs per step with the dataset's median taper, sweep, ovality and length. Then the best three patterns of every step are sawn at every other step, so each step scores every pattern that could carry a class across it.
+7. **Suggest classes** from the chart, two ways: a set number of classes (exact: the split and patterns with the highest total score), or neighbouring steps grouped while one pattern stays within a tolerance of each step's best. Both show what each class gives up against the best pattern at every centimetre. "Use these as the log classes" replaces the classes and saves each class's pattern.
+8. **Saw setting card.** One printable A4 page per pattern: diagram of the class's middle log, one row per blade on each saw (where it cuts, as wet distances from the centreline, and the board or cant that follows), kerfs, edger and resaw, and what to expect per log (boards, recovery, length, value, pieces per product) from sawing every log in the class.
 
-Generated patterns are saved as ordinary `saw_pattern` rows and can be edited by hand.
+Generated patterns are saved as ordinary `saw_pattern` rows (source "generated") and can be edited by hand. The engine takes a `map_fn` so the app can run simulations in parallel processes; the engine itself starts none.
 
 ## 8. Screens
 
@@ -347,3 +350,40 @@ Speed: the 106 logs of the Ngomi run take about 2.7 s as a batch run including d
 
 - Importing an actual `.mdb` through the web page. `reference/` is not in this repository, so the tests import the JSON fixtures exported from `ngomi 1.mdb`. The upload goes through the same importer as the Phase 1 `.mdb` path (`access-parser`), which was run against the real file in Phase 1.
 - The start command on macOS and Windows. It uses only portable pieces (uvicorn, SQLite, `webbrowser`), but it was run on Linux only.
+
+## 15. Phase 3 results
+
+The pattern generator, diameter chart, class suggestions and saw setting cards. 209 tests pass (21 new).
+
+### 15.1 Against the patterns in the Ngomi dataset
+
+Same logs, same machine, symmetric patterns with thicker boards towards the centre (the defaults):
+
+| Class | Dataset's pattern (this engine) | Generator's best | Time (4 cores) |
+| --- | --- | --- | --- |
+| 1: 18–21.9 cm, 36 logs | `25/114/25` `2*19 3*38 3*19`: 54.10 % | `50/114/50` `2*19 3*38 2*19`: 54.14 % | 11 s |
+| 2: 22–25.9 cm, 34 logs | `25/152/25` `19 25 38 50 38 25 19`: 56.23 % | `2*19/152/2*19` `2*19 25 2*50 25 2*19`: 56.86 % | 13 s |
+| 3: 26–29.9 cm, 30 logs | none | `19 25/152/25 19` `2*19 25 3*50 25 2*19`: 59.29 % | 11 s |
+| 4: 30–35.9 cm, 44 logs | none | `2*38/152/2*38` `2*19 38 3*50 38 2*19`: 58.87 % | 15 s |
+| 5: 36–41.9 cm, 48 logs | none | `38 50/152/50 38` `2*19 38 4*50 38 2*19`: 55.17 % | 17 s |
+
+The dataset's class 1 pattern is not symmetric, so the default search cannot produce it; with "symmetric only" off it is among the candidates. Through the app (three worker processes) a class search took about 20 s. A diameter chart of 18–41 cm (24 steps) took 95 s.
+
+Five classes suggested from that chart: 18–20.9, 21–26.9, 27–28.9, 29–31.9 and 32–41.9 cm, giving up 0.1 to 1.3 recovery points per class against the best pattern at every centimetre.
+
+The chart's bars zigzag between odd and even centimetres. That is the "odd number" nominal diameter setting (logs of 18.x and 19.x cm are both booked at 19 cm), not the patterns: within a step every pattern sees the same logs, so it changes neither the best pattern nor the suggested classes.
+
+### 15.2 Screens
+
+| Screen | What works |
+| --- | --- |
+| Generator: best patterns for a class | Line; a log class or one diameter; objective; target product and minimum share; sideboards, blades, thicknesses; cant widths; must yield / never cut; symmetric and thicker-to-centre switches; candidates to simulate. Runs in the background with progress and cancel. Top 10 with diagram, figures and product mix; save any of them as a pattern of any class, open it on the pattern screen, or print its setting card. |
+| Generator: diameter chart | Range, objective and the same constraints. Bar chart of the best result per centimetre coloured by suggested class, the suggested classes (set number, or tolerance) with what each gives up, the best and runner-up pattern per centimetre, and "use these as the log classes". |
+| Earlier searches | Every search is kept with its inputs and results; delete. Copied with the dataset on "save as". |
+| Saw setting card | From the pattern screen, a generator result or `/d/{id}/card?pattern_id=`. Fits one A4 page (checked by printing to PDF for 2-blade-a-side and 6-blade patterns). |
+
+### 15.3 Not done or not tested here
+
+- Process pool on macOS and Windows: written for both (worker processes are started with "spawn", the default on those systems), run on Linux only.
+- Ranking for nett value and for a target product is tested on small cases; the timings above are for dry volume recovery.
+- The generator searches cant sawing only. Live sawing and chipper-profiler patterns arrive with Phase 4, as do curve sawing and real-log variation.

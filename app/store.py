@@ -403,7 +403,8 @@ def _import_run(s: Session, ds_id: int, run: simsaw.Run, when: dt.datetime) -> m
 # Copy order: every table after the tables its foreign keys point to.
 _COPY_ORDER = [m.LogGrade, m.BoardGrade, m.Thickness, m.Width, m.LengthClass, m.LogClass, m.LogClassGrade, m.Log,
                m.LogGenerator, m.Combination, m.WaneRule, m.CentreBoard, m.GradeOutput, m.ProductionLine,
-               m.SawPattern, m.DatasetSettings, m.Run, m.RunPattern, m.RunLogResult, m.RunBoardResult]
+               m.SawPattern, m.DatasetSettings, m.Run, m.RunPattern, m.RunLogResult, m.RunBoardResult,
+               m.GeneratorJob]
 
 
 def duplicate_dataset(s: Session, ds_id: int, name: str) -> m.Dataset:

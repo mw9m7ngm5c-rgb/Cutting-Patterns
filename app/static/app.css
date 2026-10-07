@@ -130,3 +130,32 @@ svg.diagram.drop-target { outline: 3px dashed var(--accent); }
   table.data { font-size: 10pt; }
   a { color: inherit; text-decoration: none; }
 }
+
+/* generator results */
+.result-card svg.diagram { max-width: 18rem; }
+
+/* saw setting card: one A4 page */
+.card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1.2rem; max-width: 60rem; }
+.card-head { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 2px solid var(--ink); padding-bottom: .6rem; margin-bottom: .8rem; flex-wrap: wrap; }
+.card-pattern { font-size: 1.3rem; margin-top: .3rem; }
+.card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+.card-left svg.diagram { max-width: 100%; }
+.card-table { font-size: .85rem; width: 100%; }
+.card-table td, .card-table th { padding: .12rem .4rem; }
+.card-table tr.kerf td { color: var(--muted); background: #f4f5f1; }
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+  .card { border: none; padding: 0; max-width: none; font-size: 8pt; }
+  .card h1 { font-size: 14pt; }
+  .card-pattern { font-size: 12pt; }
+  .card-head { margin-bottom: .4rem; padding-bottom: .3rem; }
+  .card-body { grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .card-left svg.diagram { max-height: 80mm; border: none; }
+  .card h3 { margin: .35rem 0 .15rem; font-size: 9pt; }
+  .card .help { font-size: 7pt; margin: .05rem 0 .2rem; }
+  .card-table { font-size: 7.5pt; }
+  .card-table td, .card-table th { padding: .05rem .3rem; }
+  .card-table th .unit { font-size: 6.5pt; }
+  .card .kv { gap: 0 .8rem; }
+  .card { break-inside: avoid; }
+}

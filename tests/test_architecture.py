@@ -3,7 +3,7 @@ import ast
 import pathlib
 
 ENGINE = pathlib.Path(__file__).parent.parent / "engine"
-ALLOWED = {"__future__", "dataclasses", "enum", "math", "typing", "numpy", "re"}
+ALLOWED = {"__future__", "dataclasses", "enum", "math", "typing", "numpy", "re", "statistics"}
 
 
 def test_engine_imports_only_the_standard_library_and_numpy():

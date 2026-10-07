@@ -98,3 +98,46 @@ def class_result(ds: Dataset, line_name: str, class_no: int, primary: str, secon
         return {"problems": ["no logs fall in this class"]}
     res = simulate_pattern(logs, primary, secondary, ds.products, line, ds.settings, ds.log_class(class_no).log_price)
     return {"problems": [], **pattern_result_dict(res)}
+
+
+def median_log(logs: list[Log]) -> Log | None:
+    """The log with the middle small-end diameter: the one drawn on cards and result thumbnails."""
+    if not logs:
+        return None
+    srt = sorted(logs, key=lambda g: (g.sed_cm, g.no))
+    return srt[(len(srt) - 1) // 2]
+
+
+def setting_rows(lay, axis_label: str) -> list[dict]:
+    """One row per blade, from one side to the other: where the blade cuts (distances from the
+    centreline, wet sizes, mm) and the board or cant that follows it up to the next blade."""
+    kerfs = sorted(lay.primary_kerfs if axis_label == "x" else lay.secondary_kerfs)
+    pieces = [(f.lo, f.hi, "board", f.thickness) for f in lay.flitches if (f.kind != "cant") == (axis_label == "x")]
+    if axis_label == "x":
+        pieces.append((lay.cant_lo, lay.cant_hi, "cant", lay.cant))
+    rows = []
+    for n, (a, b) in enumerate(kerfs, 1):
+        nxt = next((p for p in sorted(pieces) if abs(p[0] - b) < 1e-6), None)
+        rows.append({"blade": n, "from": round(a, 1), "to": round(b, 1), "kerf": round(b - a, 1),
+                     "next": nxt[2] if nxt else None, "next_to": round(nxt[1], 1) if nxt else None,
+                     "dry": nxt[3].dry if nxt else None, "wet": nxt[3].wet if nxt else None})
+    return rows
+
+
+def setting_card(ds: Dataset, line_name: str, class_no: int, primary: str, secondary: str) -> dict:
+    """Everything the saw doctor needs for one pattern: diagram, blade positions, kerfs and what to expect."""
+    line = ds.line(line_name)
+    problems = check_pattern(primary, secondary, ds.products, line)
+    logs = ds.logs_in_class(class_no)
+    card = {"problems": problems, "line": line, "class": ds.log_class(class_no), "primary": primary,
+            "secondary": secondary, "logs": len(logs)}
+    if problems:
+        return card
+    lay = layout(notation.parse(primary, secondary), ds.products, line)
+    card["primary_rows"] = setting_rows(lay, "x")
+    card["secondary_rows"] = setting_rows(lay, "y")
+    card["cant"] = lay.cant
+    if logs:
+        card["result"] = class_result(ds, line_name, class_no, primary, secondary)
+        card["diagram"] = diagram(ds, line_name, median_log(logs), primary, secondary)
+    return card

@@ -347,3 +347,23 @@ class RunBoardResult(Base):
     dry_volume: Mapped[float] = mapped_column(Float)
     wet_volume: Mapped[float] = mapped_column(Float)
     value: Mapped[float] = mapped_column(Float)
+
+
+# ------------------------------------------------------------------ pattern generator
+
+class GeneratorJob(Base):
+    """One generator search: for a class / diameter ("class") or across diameters ("chart")."""
+    __tablename__ = "generator_job"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    dataset_id: Mapped[int] = _ds()
+    kind: Mapped[str] = mapped_column(String(10))                      # class | chart
+    title: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+    params: Mapped[str] = mapped_column(Text, default="{}")             # the form, as JSON
+    snapshot: Mapped[str] = mapped_column(Text, default="{}")           # engine inputs, as for a run
+    status: Mapped[str] = mapped_column(String(20), default="queued")   # queued running done cancelled failed
+    stage: Mapped[str] = mapped_column(String(100), default="")
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    message: Mapped[str] = mapped_column(Text, default="")
+    result: Mapped[str] = mapped_column(Text, default="")               # JSON

@@ -2,7 +2,7 @@
 
 Thorpe Timbers (Ngome). Tells the mill which cutting pattern to run for each log diameter class, and what recovery and product mix to expect.
 
-Status: **Phase 2 of 4 complete** (simulation engine, command line and web app). The pattern generator is Phase 3.
+Status: **Phase 3 of 4 complete** (simulation engine, command line, web app, pattern generator). Phase 4 adds curve sawing, misalignment, the three-blade edger, grades, live sawing and chipper-profiler lines.
 
 ## Run it
 
@@ -27,7 +27,7 @@ The database is `data/cutting_patterns.db`; `--db other.db` or the `CP_DB` varia
 Tests and the engine command line:
 
 ```
-.venv/bin/python -m pytest                         # 188 tests
+.venv/bin/python -m pytest                         # 209 tests
 .venv/bin/python cli.py validate --dataset tests/fixtures/ngomi_1 --run Test1
 .venv/bin/python cli.py simulate --dataset tests/fixtures/ngomi_1 --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
 ```

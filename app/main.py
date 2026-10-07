@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import pathlib
 import re
 import shutil
@@ -15,11 +16,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 
+from engine import generator as G
 from engine import loggen
 from engine.sawing import check_pattern
 
 from . import models as m
-from . import reports, runs, simview, store, tables
+from . import snapshot
+from . import genjobs, reports, runs, simview, store, svg, tables
 from .db import Database, db_url, migrate
 
 HERE = pathlib.Path(__file__).parent
@@ -43,17 +46,18 @@ def _pct(v, nd=1) -> str:
     return "" if v is None else f"{100 * v:.{nd}f} %"
 
 
-def create_app(url: str | None = None, run_in_thread: bool = True) -> FastAPI:
+def create_app(url: str | None = None, run_in_thread: bool = True, parallel: bool = True) -> FastAPI:
     url = url or db_url()
     migrate(url)
     db = Database(url)
     runs.close_interrupted(db)
+    genjobs.close_interrupted(db)
     app = FastAPI(title="Sawing patterns")
     app.state.db = db
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     tpl = Jinja2Templates(directory=HERE / "templates")
     tpl.env.filters.update(money=_money, num=_num, pct=_pct)
-    tpl.env.globals.update(store=store)
+    tpl.env.globals.update(store=store, svg=svg, objectives=G.OBJECTIVE_LABELS)
 
     def page(request: Request, name: str, **ctx):
         return tpl.TemplateResponse(request, name, ctx)
@@ -537,5 +541,225 @@ def create_app(url: str | None = None, run_in_thread: bool = True) -> FastAPI:
             fname = re.sub(r"[^A-Za-z0-9._-]+", "_", f"{r.name}.xlsx")
         return Response(body, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+    # -------------------------------------------------------------- pattern generator
+
+    def _products_list(e) -> list[tuple[float, float]]:
+        return sorted({(c.thickness, c.width) for c in e.products.combinations if c.valid})
+
+    def _pair(v: str) -> list[float]:
+        t, w = v.lower().split("x")
+        return [float(t), float(w)]
+
+    @app.get("/d/{ds_id}/generator", response_class=HTMLResponse)
+    def generator_page(request: Request, ds_id: int, tab: str = "class", msg: str = ""):
+        with db.session() as s:
+            c = ctx(s, ds_id, "generator")
+            e = store.engine_dataset(s, ds_id)
+            lines = s.scalars(select(m.ProductionLine).where(m.ProductionLine.dataset_id == ds_id).order_by(m.ProductionLine.no)).all()
+            classes = s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id).order_by(m.LogClass.no)).all()
+            jobs = s.scalars(select(m.GeneratorJob).where(m.GeneratorJob.dataset_id == ds_id)
+                             .order_by(m.GeneratorJob.created_at.desc(), m.GeneratorJob.id.desc())).all()
+            seds = [g.sed_cm for g in e.logs]
+            span = (int(min(seds)), int(max(seds))) if seds else (18, 40)
+            lengths = sorted(g.length_m for g in e.logs)
+            return page(request, "generator.html", **c, tab=tab, lines=lines, classes=classes, jobs=jobs, msg=msg,
+                        products=_products_list(e), widths=[w.dry for w in e.products.widths], span=span,
+                        length=lengths[len(lengths) // 2] if lengths else 3.0,
+                        counts={lc.no: len(e.logs_in_class(lc.no)) for lc in e.log_classes})
+
+    @app.post("/d/{ds_id}/generator")
+    async def generator_start(request: Request, ds_id: int):
+        f = await request.form()
+        kind = "chart" if f.get("kind") == "chart" else "class"
+        try:
+            with db.session() as s:
+                dataset_or_404(s, ds_id)
+                ln = s.get(m.ProductionLine, int(f["line_id"]))
+                if ln is None or ln.dataset_id != ds_id:
+                    raise ValueError("choose a production line")
+                e = store.engine_dataset(s, ds_id)
+            num = lambda k: (str(f.get(k) or "").strip().replace(",", ".") or None)
+            p = {"line_id": ln.id, "line_name": ln.name, "objective": f.get("objective", "volume"),
+                 "symmetric": f.get("symmetric") == "on", "thicker_to_centre": f.get("thicker_to_centre") == "on",
+                 "max_sideboards": int(num("max_sideboards") or 2),
+                 "max_primary_blades": int(num("max_primary_blades")) if num("max_primary_blades") else None,
+                 "max_secondary_blades": int(num("max_secondary_blades")) if num("max_secondary_blades") else None,
+                 "max_thicknesses": int(num("max_thicknesses")) if num("max_thicknesses") else None,
+                 "cant_widths": [float(w) for w in f.getlist("cant_width")] or None,
+                 "must_include": [_pair(v) for v in f.getlist("must_include")],
+                 "exclude": [_pair(v) for v in f.getlist("exclude")],
+                 "target": _pair(f["target"]) if f.get("target") else None,
+                 "min_share": float(num("min_share") or 0) / 100.0,
+                 "length_m": float(num("length_m")) if num("length_m") else None}
+            if kind == "class":
+                p["simulate"] = int(num("simulate") or 80)
+                if f.get("mode") == "diameter":
+                    p["mode"], p["diameter_cm"] = "diameter", float(num("diameter_cm"))
+                    title = f"{p['diameter_cm']:g} cm on {ln.name}"
+                else:
+                    with db.session() as s2:
+                        cl = s2.get(m.LogClass, int(f["class_id"]))
+                    if cl is None or cl.dataset_id != ds_id:
+                        raise ValueError("choose a log class")
+                    p["mode"], p["class_no"], p["class_id"] = "class", cl.no, cl.id
+                    title = f"Class {cl.no} ({cl.min_diameter_cm:g}-{cl.max_diameter_cm:g} cm) on {ln.name}"
+            else:
+                p["simulate"] = int(num("simulate") or 24)
+                p["from_cm"], p["to_cm"] = int(float(num("from_cm"))), int(float(num("to_cm")))
+                if p["to_cm"] < p["from_cm"] or p["to_cm"] - p["from_cm"] > 60:
+                    raise ValueError("the diameter range must run upward and span at most 60 cm")
+                title = f"Diameter chart {p['from_cm']}-{p['to_cm']} cm on {ln.name}"
+        except (KeyError, ValueError, TypeError) as err:
+            msg = str(err) if isinstance(err, ValueError) and "could not convert" not in str(err) else "Check the numbers in the form."
+            return go(f"/d/{ds_id}/generator", tab=kind, msg=msg)
+        title += f", {G.OBJECTIVE_LABELS[G.Objective(p['objective'])].lower()}"
+        jid = genjobs.create(db, ds_id, e, kind, p, title)
+        if run_in_thread:
+            genjobs.start(db, jid, parallel)
+        else:
+            genjobs.execute(db, jid, parallel)
+        return RedirectResponse(f"/d/{ds_id}/generator/{jid}", 303)
+
+    def _job(s, ds_id: int, jid: int) -> m.GeneratorJob:
+        job = s.get(m.GeneratorJob, jid)
+        if job is None or job.dataset_id != ds_id:
+            raise HTTPException(404, "No such search")
+        return job
+
+    @app.get("/d/{ds_id}/generator/{jid}", response_class=HTMLResponse)
+    def generator_job_page(request: Request, ds_id: int, jid: int, group: str = "n", n: int | None = None,
+                           tol: float | None = None, msg: str = ""):
+        with db.session() as s:
+            c = ctx(s, ds_id, "generator")
+            job = _job(s, ds_id, jid)
+            p = json.loads(job.params)
+            result = json.loads(job.result) if job.result else None
+            classes = s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id).order_by(m.LogClass.no)).all()
+            data = {"job": job, "p": p, "result": result, "classes": classes, "msg": msg}
+            if result and job.kind == "class" and result["ranked"]:
+                snap = snapshot.loads(job.snapshot)
+                if p.get("mode") == "diameter":
+                    show = G.representative_logs(p["diameter_cm"], snap.logs, p.get("length_m"))[1]
+                else:
+                    show = simview.median_log([g for g in snap.logs if g.no in set(result["meta"]["log_nos"])])
+                data["shown_log"] = show
+                data["diagrams"] = [simview.diagram(snap, p["line_name"], show, r["primary"], r["secondary"])
+                                    if show else None for r in result["ranked"]]
+                d = p.get("diameter_cm")
+                data["default_class"] = p.get("class_id") or next(
+                    (cl.id for cl in classes if d is not None and cl.min_diameter_cm <= d <= cl.max_diameter_cm), None)
+            if result and job.kind == "chart":
+                value = p.get("objective") == "value"
+                data["group"] = "tol" if group == "tol" else "n"
+                data["n"] = n or max(1, len(classes))
+                data["tol"] = tol if tol is not None else (20.0 if value else 0.5)
+                data["groups"] = genjobs.groups(result, data["group"],
+                                                data["n"] if data["group"] == "n" else data["tol"], p.get("objective"))
+                data["scale"] = 1.0 if value else 100.0
+                data["chart"] = _chart(result, data["groups"], p.get("objective"))
+            return page(request, "generator_job.html", **c, **data)
+
+    def _chart(result: dict, groups: list, objective: str | None) -> dict:
+        steps = [st for st in result["steps"] if st["ranked"]]
+        value = objective == "value"
+        ys = [st["ranked"][0]["nett_value"] if value else 100 * st["ranked"][0]["dry_recovery"] for st in steps]
+        group_of = {}
+        for gi, g in enumerate(groups):
+            for sed in g.steps:
+                group_of[sed] = gi
+        return {"bars": [{"sed": st["sed"], "y": y, "group": group_of.get(st["sed"], 0),
+                          "pattern": f'{st["ranked"][0]["primary"]}  {st["ranked"][0]["secondary"]}'}
+                         for st, y in zip(steps, ys)],
+                "ymax": max(ys) if ys else 1.0, "ymin": min(0.0, min(ys)) if ys else 0.0,
+                "unit": "R/m³ log, nett" if value else "% dry recovery"}
+
+    @app.get("/api/genjobs/{jid}")
+    def generator_status(jid: int):
+        with db.session() as s:
+            job = s.get(m.GeneratorJob, jid)
+            if job is None:
+                raise HTTPException(404)
+            return {"status": job.status, "stage": job.stage, "progress": job.progress, "total": job.total,
+                    "message": job.message}
+
+    @app.post("/d/{ds_id}/generator/{jid}/cancel")
+    def generator_cancel(ds_id: int, jid: int):
+        genjobs.cancel(jid)
+        return RedirectResponse(f"/d/{ds_id}/generator/{jid}", 303)
+
+    @app.post("/d/{ds_id}/generator/{jid}/delete")
+    def generator_delete(ds_id: int, jid: int):
+        with db.session() as s:
+            job = _job(s, ds_id, jid)
+            if job.status not in ("running", "queued"):
+                s.delete(job)
+                s.commit()
+        return go(f"/d/{ds_id}/generator", tab="history")
+
+    @app.post("/d/{ds_id}/generator/{jid}/save")
+    def generator_save(ds_id: int, jid: int, primary: str = Form(...), secondary: str = Form(""),
+                       class_id: int = Form(...)):
+        with db.session() as s:
+            job = _job(s, ds_id, jid)
+            p = json.loads(job.params)
+            cl = s.get(m.LogClass, class_id)
+            ln = s.get(m.ProductionLine, p["line_id"])
+            if cl is None or cl.dataset_id != ds_id or ln is None:
+                return go(f"/d/{ds_id}/generator/{jid}", msg="That class or line no longer exists.")
+            n = (s.scalar(select(func.max(m.SawPattern.pattern_no)).where(
+                m.SawPattern.line_id == ln.id, m.SawPattern.log_class_id == cl.id)) or 0) + 1
+            s.add(m.SawPattern(dataset_id=ds_id, line_id=ln.id, log_class_id=cl.id, pattern_no=n, primary=primary,
+                               secondary=secondary, source="generated"))
+            s.commit()
+        return go(f"/d/{ds_id}/generator/{jid}", msg=f"Saved as pattern {n} of class {cl.no} on {ln.name}.")
+
+    @app.post("/d/{ds_id}/generator/{jid}/apply")
+    def generator_apply(ds_id: int, jid: int, group: str = Form("n"), value: float = Form(...)):
+        """Replace the log classes with the suggested ones and save each class's pattern."""
+        with db.session() as s:
+            job = _job(s, ds_id, jid)
+            p = json.loads(job.params)
+            ln = s.get(m.ProductionLine, p["line_id"])
+            if job.kind != "chart" or not job.result or ln is None:
+                return go(f"/d/{ds_id}/generator/{jid}", msg="Nothing to apply.")
+            groups = genjobs.groups(json.loads(job.result), group, value, p.get("objective"))
+            old = s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id).order_by(m.LogClass.no)).all()
+            template = old[0] if old else None
+            keep = ("min_length_m", "max_length_m", "length_incr_m", "min_taper", "max_taper", "min_sweep",
+                    "max_sweep", "min_ovality", "max_ovality", "min_defect_core", "max_defect_core")
+            prices = [(c.min_diameter_cm, c.max_diameter_cm, c.log_price, c.log_price_placeholder) for c in old]
+            grades = list(template.grades) if template else []
+            for c in old:
+                s.delete(c)
+            s.flush()
+            for n, g in enumerate(groups, 1):
+                mid = (g.from_cm + g.to_cm) / 2
+                price = next(((pr, ph) for lo, hi, pr, ph in prices if lo <= mid <= hi), (0.0, True))
+                cl = m.LogClass(dataset_id=ds_id, no=n, min_diameter_cm=g.from_cm, max_diameter_cm=g.to_cm,
+                                log_price=price[0], log_price_placeholder=price[1],
+                                **{k: getattr(template, k) for k in keep} if template else {})
+                cl.grades = grades
+                s.add(cl)
+                s.flush()
+                s.add(m.SawPattern(dataset_id=ds_id, line_id=ln.id, log_class_id=cl.id, pattern_no=1,
+                                   primary=g.primary, secondary=g.secondary, source="generated"))
+            s.commit()
+        return go(f"/d/{ds_id}/logs", msg=f"{len(groups)} log classes set from the diameter chart, each with its best pattern.")
+
+    @app.get("/d/{ds_id}/card", response_class=HTMLResponse)
+    def setting_card(request: Request, ds_id: int, line_id: int | None = None, class_id: int | None = None,
+                     primary: str = "", secondary: str = "", pattern_id: int | None = None):
+        with db.session() as s:
+            c = ctx(s, ds_id, "patterns")
+            if pattern_id:
+                sp = s.get(m.SawPattern, pattern_id)
+                if sp is None or sp.dataset_id != ds_id:
+                    raise HTTPException(404)
+                line_id, class_id, primary, secondary = sp.line_id, sp.log_class_id, sp.primary, sp.secondary
+            ln, lc = _line_and_class(s, ds_id, line_id, class_id)
+            e = store.engine_dataset(s, ds_id)
+        card = simview.setting_card(e, ln.name, lc.no, primary, secondary)
+        return page(request, "card.html", **c, card=card, today=dt.date.today())
 
     return app

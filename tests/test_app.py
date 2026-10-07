@@ -164,10 +164,12 @@ def test_runs_interrupted_by_closing_the_app_are_marked_on_start(tmp_path):
     with db.session() as s:
         ds = store.create_default_dataset(s, "D")
         s.add(m.Run(dataset_id=ds.id, name="Half done", status="running"))
+        s.add(m.GeneratorJob(dataset_id=ds.id, kind="class", status="running"))
         s.commit()
     app = create_app(url, run_in_thread=False)
     with app.state.db.session() as s:
         assert s.query(m.Run).one().status == "cancelled"
+        assert s.query(m.GeneratorJob).one().status == "cancelled"
 
 
 def test_pattern_that_cannot_be_sawn_is_reported_not_fatal(db, ngomi):

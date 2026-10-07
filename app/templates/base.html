@@ -13,7 +13,7 @@
   <span class="ds-name" title="Current dataset">{{ ds.name }}</span>
   <nav>
     {% set items = [("overview", "", "Overview"), ("logs", "/logs", "Logs"), ("products", "/products", "Products"),
-                    ("machines", "/machines", "Machines"), ("patterns", "/patterns", "Sawing patterns"),
+                    ("machines", "/machines", "Machines"), ("patterns", "/patterns", "Sawing patterns"), ("generator", "/generator", "Generator"),
                     ("runs", "/runs", "Batch runs"), ("reports", "/reports", "Reports"), ("settings", "/settings", "Settings")] %}
     {% for key, path, label in items %}
       <a href="/d/{{ ds.id }}{{ path }}" class="{{ 'active' if section == key }}">{{ label }}</a>
