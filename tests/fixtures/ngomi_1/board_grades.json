@@ -1,0 +1,16 @@
+[
+ {
+  "grade_uid": 1,
+  "grade_no": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100,
+  "worst_single_face": null,
+  "combined_faces": null,
+  "worst_edge": null,
+  "combined_edges": null,
+  "all_surfaces": null,
+  "grade": "All board grades"
+ }
+]

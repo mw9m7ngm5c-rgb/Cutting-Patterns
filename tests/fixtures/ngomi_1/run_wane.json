@@ -1,0 +1,130 @@
+[
+ {
+  "thickness_uid": 1,
+  "width_uid": 1,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 2,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 3,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 4,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 1,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 2,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 3,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 4,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 1,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 2,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 3,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 4,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 1,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 2,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 3,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 4,
+  "thickness_wane_perc": 10.0,
+  "width_wane_perc": 30.0,
+  "length_wane": 100.0,
+  "length_wane_type": 0
+ }
+]

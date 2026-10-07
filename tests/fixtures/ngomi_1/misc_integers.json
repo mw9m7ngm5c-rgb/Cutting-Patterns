@@ -1,0 +1,106 @@
+[
+ {
+  "variable_value": 1,
+  "variable_name": "Arris from top x-sec"
+ },
+ {
+  "variable_value": 2,
+  "variable_name": "Core distrib"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Diameter distrib"
+ },
+ {
+  "variable_value": 5,
+  "variable_name": "Disc separation"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Discretised logs"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Grouped saw patterns"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Imm log renumbering"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Initialise seed"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Interpolation type"
+ },
+ {
+  "variable_value": 150,
+  "variable_name": "Knot grading length"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Length distrib"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Log cross-sections"
+ },
+ {
+  "variable_value": 50,
+  "variable_name": "Max logs per class"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Nominal diameter"
+ },
+ {
+  "variable_value": 2,
+  "variable_name": "Ovality distrib"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Percentage fines"
+ },
+ {
+  "variable_value": 64,
+  "variable_name": "Points per disc"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Random seed"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Seed value"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Show knots"
+ },
+ {
+  "variable_value": 2,
+  "variable_name": "Sweep distrib"
+ },
+ {
+  "variable_value": 2,
+  "variable_name": "Taper distrib"
+ },
+ {
+  "variable_value": 0,
+  "variable_name": "Ungenerated logs"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Use nominal diameter"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Use nominal length"
+ },
+ {
+  "variable_value": 1,
+  "variable_name": "Use nominal taper"
+ }
+]

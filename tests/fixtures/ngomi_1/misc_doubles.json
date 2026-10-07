@@ -1,0 +1,26 @@
+[
+ {
+  "variable_value": 0.0,
+  "variable_name": "Chip price"
+ },
+ {
+  "variable_value": 0.0,
+  "variable_name": "Sawdust price"
+ },
+ {
+  "variable_value": 10.0,
+  "variable_name": "Nominal taper"
+ },
+ {
+  "variable_value": 0.30000001192092896,
+  "variable_name": "Nominal length incr"
+ },
+ {
+  "variable_value": 0.8999999761581421,
+  "variable_name": "Nominal length start"
+ },
+ {
+  "variable_value": 6.599999904632568,
+  "variable_name": "Nominal length end"
+ }
+]

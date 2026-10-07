@@ -1,0 +1,53 @@
+[
+ {
+  "some_uid": 1,
+  "line_no": 1,
+  "pattern_no": 1,
+  "dry_vol_recovery": 54.0,
+  "wet_vol_recovery": 61.599998474121094,
+  "gross_value_recovery": 2160.0400390625,
+  "nett_value_recovery": 2040.0400390625,
+  "board_count": 248,
+  "average_length": 2.299999952316284,
+  "class_no": "  1",
+  "diameter_range": "18.0 - 21.9",
+  "length_range": "1.8 - 6.6",
+  "prod_line_name": "Line 1",
+  "primary": "25/114/25",
+  "secondary": "2*19 3*38 3*19"
+ },
+ {
+  "some_uid": 2,
+  "line_no": 1,
+  "pattern_no": 2,
+  "dry_vol_recovery": 52.29999923706055,
+  "wet_vol_recovery": 59.79999923706055,
+  "gross_value_recovery": 2091.659912109375,
+  "nett_value_recovery": 1971.6600341796875,
+  "board_count": 217,
+  "average_length": 2.200000047683716,
+  "class_no": "  1",
+  "diameter_range": "18.0 - 21.9",
+  "length_range": "1.8 - 6.6",
+  "prod_line_name": "Line 1",
+  "primary": "19/152/19",
+  "secondary": "2*19 25 50 25 2*19"
+ },
+ {
+  "some_uid": 3,
+  "line_no": 1,
+  "pattern_no": 1,
+  "dry_vol_recovery": 56.20000076293945,
+  "wet_vol_recovery": 64.0,
+  "gross_value_recovery": 2249.199951171875,
+  "nett_value_recovery": 2129.199951171875,
+  "board_count": 265,
+  "average_length": 2.299999952316284,
+  "class_no": "  2",
+  "diameter_range": "22.0 - 25.9",
+  "length_range": "1.8 - 6.6",
+  "prod_line_name": "Line 1",
+  "primary": "25/152/25",
+  "secondary": "19 25 38 50 38 25 19"
+ }
+]

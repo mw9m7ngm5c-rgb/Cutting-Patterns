@@ -1,0 +1,32 @@
+[
+ {
+  "generator_uid": 1,
+  "run_uid": 1,
+  "generator_no": 1,
+  "min_diameter": 17.0,
+  "max_diameter": 41.900001525878906,
+  "diameter_distr": 0,
+  "min_length": 2.4000000953674316,
+  "max_length": 3.0,
+  "length_incr": 0.30000001192092896,
+  "length_distr": 0,
+  "min_taper": 8.0,
+  "max_taper": 11.0,
+  "taper_distr": 2,
+  "min_sweep": 0.0,
+  "max_sweep": 15.0,
+  "sweep_distr": 2,
+  "min_ovality": 0.949999988079071,
+  "max_ovality": 1.0499999523162842,
+  "ovality_distr": 2,
+  "min_defect_core": 0,
+  "max_defect_core": 0,
+  "defect_core_distr": 2,
+  "no_of_logs": 200,
+  "reset_seed": true,
+  "seed": 1,
+  "real_logs": false,
+  "data_source": 0,
+  "file_name": ""
+ }
+]

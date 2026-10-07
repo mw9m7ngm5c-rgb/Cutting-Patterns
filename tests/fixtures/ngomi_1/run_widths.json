@@ -1,0 +1,26 @@
+[
+ {
+  "width_uid": 1,
+  "run_uid": 1,
+  "dry_width": 76.0,
+  "wet_width": 81.0
+ },
+ {
+  "width_uid": 2,
+  "run_uid": 1,
+  "dry_width": 102.0,
+  "wet_width": 107.0
+ },
+ {
+  "width_uid": 3,
+  "run_uid": 1,
+  "dry_width": 114.0,
+  "wet_width": 120.0
+ },
+ {
+  "width_uid": 4,
+  "run_uid": 1,
+  "dry_width": 152.0,
+  "wet_width": 160.0
+ }
+]
