@@ -1,6 +1,6 @@
 # Sawing pattern simulator and generator: specification
 
-Phase 0 output. Status: awaiting sign-off before Phase 1.
+Status: Phase 1 (engine and command line) complete; awaiting sign-off before Phase 2. Phase 1 results are in section 13.
 Companion document: `ASSUMPTIONS.md` (every rule here that was inferred rather than read is listed there with its evidence).
 
 ## 1. Purpose
@@ -49,12 +49,12 @@ All checked by script against the fixtures (`tools/check_sawlines.py`, `tools/ex
 ```
 engine/      standalone package: no web, no database, no file I/O beyond explicit loaders
   model.py       dataclasses for every input and result
+  model.py       dataclasses for every input and result, recovery and value sums
   notation.py    pattern parser and serialiser
-  geometry.py    cross-sections, chords, areas (numpy)
-  log.py         ideal-log builder (discs along the length)
-  sawing.py      primary and secondary breakdown, saw-line layout
-  edging.py      edger, cross-cut, resaw, wane test
-  results.py     volumes, values, mass balance, aggregation
+  sections.py    cross-sections behind one interface: exact ellipses and polygons (numpy)
+  log.py         ideal-log builder (discs along the length), log volume
+  sawing.py      saw-line layout, primary and secondary breakdown, resaw, sawdust
+  edging.py      edger, cross-cut, wane test
   generator.py   enumeration, pre-screen, ranking  (Phase 3)
 app/         FastAPI routes, Jinja2 templates, static (vanilla JS, inline SVG), SQLAlchemy models, Alembic
 importers/   Simsaw .mdb import (access-parser)
@@ -68,7 +68,7 @@ Rules:
 
 - `engine/` imports nothing from `app/` or `importers/`, and nothing from FastAPI or SQLAlchemy. A test enforces this by scanning imports.
 - The engine works in **millimetres** for cross-section and **metres** for length. Unit conversion (cm diameters, mm total sweep, cm defect core, mm/m and % class limits) happens once, in `model.py` constructors and in the importer.
-- One `numpy.random.Generator`, created from the run seed, is passed explicitly wherever randomness is needed. No module-level random state.
+- One `numpy.random.Generator`, created from the run seed, is passed explicitly wherever randomness is needed. No module-level random state. (Phase 1 uses no randomness; grades in Phase 4 are the first user.)
 - Python 3.11+, FastAPI, SQLite, `numpy`, `openpyxl`, `pytest`. One start command (`python -m app`), which runs migrations and opens the browser.
 
 ## 4. Simulation rules
@@ -89,7 +89,7 @@ Confirmed against the stored board coordinates.
 - Each ideal disc is an ellipse. Nominal diameter D(z) = SED + taper × z. Horizontal diameter D/√ovality, vertical diameter D×√ovality.
 - Sweep is a constant-radius arc in the y–z plane, horns up: both ends high, the middle low by the sweep amount. The saw datum (y = 0) runs through the centres of the two end discs.
 - Defect core: same centreline and ovality, constant diameter (no taper).
-- Each disc is held as a closed polygon (points per disc is a setting). All sawing code asks a disc for chords and areas through one interface, so measured or perturbed discs use the same path. An ellipse is one way of building that polygon, not a special case in the sawing code.
+- All sawing code asks the discs two questions through one interface: where does a horizontal line at height y enter and leave the wood, and the same for a vertical line at x. Two implementations answer: exact ellipses (Simsaw's "Analytical" type, which the Ngomi dataset uses) and closed polygons with a settable number of points (Simsaw's "Discretised" type, and the route for measured or perturbed discs). No sawing code knows which it has. See ASSUMPTIONS A-05 for why both exist.
 
 ### 4.3 Primary breakdown
 
@@ -124,7 +124,11 @@ For a flitch of fixed wet thickness:
 5. Three-blade edger: after the first board is chosen, try a second board from the remaining offcut at the fixed second width (or the best valid width when set to "Best").
 6. Resaw: when no valid board can be made at the flitch's thickness, try each thinner valid thickness. The resawn board keeps the inner sawn face; the resaw cut sits one wet thickness out from it, and the resaw kerf is charged to sawdust. Confirmed positions in the run: a 25 mm flitch at y 74 to 101 became a 19 mm board with the resaw cut at y = 95.
 
-Wane test (inferred, see ASSUMPTIONS A-07): at every disc along the board, wane may remove at most `thickness_wane %` of the board thickness at each edge and at most `width_wane %` of the board width on the waney face, and may be present on at most `length_wane` of the board length.
+Wane test (fitted to the reference run, ASSUMPTIONS A-07). At each corner of the board's cross-section, at every disc along the board:
+
+    wane depth down the edge / allowed depth  +  wane width along the face / allowed width  <=  1
+
+where allowed depth = `thickness_wane %` of the dry thickness and allowed width = half of `width_wane %` of the dry width. Wane may be present on at most `length_wane` of the board length. Because both terms grow as an edge moves outward, each disc allows one interval of board positions, and a board exists over a run of discs when those intervals overlap. The edger takes the longest such run for each candidate width.
 
 ### 4.7 Grades
 
@@ -216,13 +220,13 @@ UI terms: small-end diameter, wet and dry sizes, cant, sideboard, kerf, wane. Cu
 
 Fixtures: `tests/fixtures/ngomi_1/*.json`, exported by `importers/export_fixtures.py`.
 
-| # | Test | Tolerance | Status after Phase 0 |
+| # | Test | Tolerance | Status after Phase 1 |
 | --- | --- | --- | --- |
-| 1 | Nominal log volume vs `run_log_results.log_volume` | 1e-5 m³ | Formula already reproduces all 106 to 8e-9 |
-| 2 | Saw lines and full-width cant boards vs stored coordinates | 0.1 mm | Layout rule already reproduces all 730 boards exactly |
-| 3 | Per-pattern dry recovery and board count | 1.0 pp, 5 % | Depends on the wane test and edger rules (A-07 to A-11) |
-| 4 | Per-log mass balance | 1e-6 m³ | Holds by construction |
-| 5 | Notation round-trip | exact | Trivial for the three run patterns; full grammar in Phase 1 |
+| 1 | Nominal log volume vs `run_log_results.log_volume` | 1e-5 m³ | Pass: all 106 to 8e-9 |
+| 2 | Saw lines and full-width cant boards vs stored coordinates | 0.1 mm | Pass: all 730 boards on our saw lines; 325 of Simsaw's 326 full-width boards reproduced |
+| 3 | Per-pattern dry recovery and board count | 1.0 pp, 5 % | Pass: within 0.10 pp, board counts exact |
+| 4 | Per-log mass balance | 1e-6 m³ | Pass |
+| 5 | Notation round-trip | exact | Pass: every pattern in both datasets, the help pages and the course notes |
 
 If test 3 fails I stop and show a per-log, per-board comparison for the five worst logs.
 
@@ -234,8 +238,8 @@ As in the brief: 0 plan (this document), 1 engine and CLI with the acceptance te
 
 ## 11. Missing inputs
 
-- `template.mdb`: the blank default dataset. Needed for the "new dataset" defaults (default sizes, default wane rules, default line). Without it I will seed new datasets from the Ngomi values and mark them as placeholders.
-- `temp.jpg`: the pattern-graphic screenshot. The course notes contain a similar screenshot (page 21), which is enough to design the diagram, but the original would be better.
+- `template.mdb`: received and exported to `tests/fixtures/template/`. It holds Simsaw's defaults: thicknesses 25/38/50/76, widths 76/114/152/228, one line with 5 mm kerfs and a two-blade edger, one pattern `25/76/25` + `5*25`, R800/m³, and no wane rows.
+- `temp.jpg`: still missing. The course notes contain a similar screenshot (page 21), which is enough to design the diagram.
 
 ## 12. Decisions from the owner (7 October 2026)
 
@@ -245,10 +249,49 @@ As in the brief: 0 plan (this document), 1 engine and CLI with the acceptance te
 | Kerfs | Selectable per line. Default 3 mm primary and secondary (Ngomi values), marked as placeholder until measured. |
 | Curve sawing | Owner not sure what the secondary saw can do. Default "none" (straight), selectable per line. Half and full taper arrive in Phase 4. |
 | Edger blades and resaw | Selectable per line, Ngomi values as defaults (3 blades, 5 mm edger kerf, resaws on both saws at 5 mm). |
-| Products and prices | Owner will send a price list. Until then the 13 valid Ngomi sizes at the R4 000/m³ placeholder. |
+| Products and prices | Owner enters prices in the app. Datasets start with the 13 valid Ngomi sizes at the R4 000/m³ placeholder, clearly marked. |
 | Log intake | Owner will supply diameter range, lengths and log price. Until then the Ngomi classes and R120/m³ placeholder. |
 | Default wane | No wane on structural thicknesses (38 and 50 mm). 10 % thickness and 30 % width on 19 and 25 mm. Editable per product. The acceptance tests keep using the wane rules stored in the Test1 run. |
 | Default generator objective | Dry volume recovery. Switchable on each run. |
 | Code home | GitHub repository, one commit per phase. |
-| `template.mdb` | Owner will add it to the Reference folder. |
+| `template.mdb` | Added by the owner and imported. |
 | Simsaw screenshots | Not available (Simsaw cannot be run). ASSUMPTIONS A-08, A-09, A-15 and A-30 stay fitted or assumed. |
+
+## 13. Phase 1 results
+
+Engine and command line only; no web app yet. 150 tests pass.
+
+### 13.1 Against Simsaw's Test1 run
+
+| Pattern | Logs | Dry recovery, ours | Simsaw | Boards, ours | Simsaw | Identical boards |
+| --- | --- | --- | --- | --- | --- | --- |
+| `25/114/25` + `2*19 3*38 3*19` | 36 | 54.10 % | 54.00 % | 248 | 248 | 242 |
+| `19/152/19` + `2*19 25 50 25 2*19` | 36 | 52.37 % | 52.29 % | 217 | 217 | 212 |
+| `25/152/25` + `19 25 38 50 38 25 19` | 34 | 56.23 % | 56.23 % | 265 | 265 | 265 |
+
+"Identical" means same position in the pattern, same thickness and width, same length. The 11 boards that differ are each one disc (5 cm) either side of a 0.3 m length step. All 11 of Simsaw's resawn boards are reproduced. Sawdust totals are 5 to 7 % above Simsaw's (ASSUMPTIONS A-23); chips absorb the difference, recovery is unaffected.
+
+Speed: 50 logs on one pattern in about 0.4 s (target 2 s).
+
+### 13.2 What the engine does
+
+- Pattern notation: parse, validate, serialise.
+- Ideal logs: taper, ovality, horns-up sweep, defect core outline; exact or polygon discs.
+- Cant sawing with straight secondary cuts, one or two kerf sizes per saw.
+- Edging to the best valid width by volume, length or value; cross-cut to length steps; minimum length; wane rules per product; invalid combinations; centre boards; riving knives.
+- Resaw on the primary and secondary lines.
+- Volumes, values, mass balance, recoveries, product mix.
+- Simsaw import from `.mdb` or JSON fixtures: current inputs or a batch run's snapshot with Simsaw's results.
+
+### 13.3 What it refuses for now
+
+A dataset that asks for any Phase 4 feature (curve sawing, arris alignment, rotation, misalignment, offsets, live sawing, chipper-profiler sideboards) stops with a message naming the feature. It is never silently ignored.
+
+### 13.4 Command line
+
+```
+python cli.py validate --dataset "reference/ngomi 1.mdb" --run Test1
+python cli.py simulate --dataset "reference/ngomi 1.mdb"
+python cli.py simulate --dataset "reference/ngomi 1.mdb" --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
+python cli.py simulate --dataset "reference/ngomi 1.mdb" --pattern "25/114/25" "2*19 3*38 3*19" --log 8 --boards
+```

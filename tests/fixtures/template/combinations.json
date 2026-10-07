@@ -1,0 +1,130 @@
+[
+ {
+  "thickness_uid": 1,
+  "width_uid": 1,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 2,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 3,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 4,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 1,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 2,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 3,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 4,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 1,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": false,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 2,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": false,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 3,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 4,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 1,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": false,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 2,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": false,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 3,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 4,
+  "length_uid": 1,
+  "grade_uid": 1,
+  "valid_combination": true,
+  "unit_price": 800.0
+ }
+]

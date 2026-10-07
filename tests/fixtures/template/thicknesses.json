@@ -1,0 +1,22 @@
+[
+ {
+  "thickness_uid": 1,
+  "dry_thickness": 25.0,
+  "wet_thickness": 27.0
+ },
+ {
+  "thickness_uid": 2,
+  "dry_thickness": 38.0,
+  "wet_thickness": 41.0
+ },
+ {
+  "thickness_uid": 3,
+  "dry_thickness": 50.0,
+  "wet_thickness": 54.0
+ },
+ {
+  "thickness_uid": 4,
+  "dry_thickness": 76.0,
+  "wet_thickness": 81.0
+ }
+]

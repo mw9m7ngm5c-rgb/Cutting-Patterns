@@ -1,0 +1,11 @@
+[
+ {
+  "grade_uid": 1,
+  "grade_no": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 0,
+  "one_hundred_percent": 0,
+  "grade": "All board grades"
+ }
+]
