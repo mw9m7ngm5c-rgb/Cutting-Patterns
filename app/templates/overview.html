@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ ds.name }}</h1>
+<div class="row">
+  <div class="panel grow">
+    <h2 style="margin-top:0">Log classes</h2>
+    <table class="data">
+      <thead><tr><th>Class</th><th>SED<span class="unit">cm</span></th><th>Logs</th><th>Patterns</th><th>Log price<span class="unit">R/m³</span></th><th class="text"></th></tr></thead>
+      <tbody>
+      {% for r in classes %}
+        <tr><td>{{ r.c.no }}</td><td>{{ "%.1f"|format(r.c.min_diameter_cm) }} – {{ "%.1f"|format(r.c.max_diameter_cm) }}</td>
+            <td>{{ r.logs }}</td><td>{{ r.patterns }}</td><td>{{ r.c.log_price|num }}</td>
+            <td class="text"><a href="/d/{{ ds.id }}/patterns#class={{ r.c.no }}">Patterns</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if unclassed %}<p class="help">{{ unclassed }} log{{ "s" if unclassed != 1 }} fall in no class and will not be sawn.</p>{% endif %}
+    <p class="help">{{ e.logs|length }} logs · {{ e.products.thicknesses|length }} thicknesses ·
+      {{ e.products.widths|length }} widths · {{ e.products.combinations|selectattr("valid")|list|length }} valid products ·
+      {{ e.lines|length }} production line{{ "s" if e.lines|length != 1 }} · {{ e.patterns|length }} patterns</p>
+  </div>
+  <div class="panel" style="flex: 0 1 28rem">
+    <h2 style="margin-top:0">About this dataset</h2>
+    <form method="post" action="/datasets/{{ ds.id }}/rename">
+      <label class="field">Name <input name="name" value="{{ ds.name }}" required></label>
+      <label class="field" style="margin-top:.6rem">Notes <textarea name="notes" rows="4">{{ ds.notes }}</textarea></label>
+      <p class="help">Source: {{ ds.source or "–" }}. Created {{ ds.created_at.strftime("%Y-%m-%d") if ds.created_at }}.</p>
+      <button type="submit">Save</button>
+    </form>
+  </div>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Workflow</h2>
+  <ol>
+    <li><a href="/d/{{ ds.id }}/logs">Logs</a>: define log classes, then type, paste or generate logs.</li>
+    <li><a href="/d/{{ ds.id }}/products">Products</a>: sizes (dry and wet), which products the mill sells and their prices, wane rules.</li>
+    <li><a href="/d/{{ ds.id }}/machines">Machines</a>: kerfs, resaws and the edger for each production line.</li>
+    <li><a href="/d/{{ ds.id }}/patterns">Sawing patterns</a>: build patterns for each class and try them on single logs.</li>
+    <li><a href="/d/{{ ds.id }}/runs">Batch runs</a>: saw every pattern on its class and keep the results.</li>
+    <li><a href="/d/{{ ds.id }}/reports">Reports</a>: one-liner, board and summary reports, printable or as Excel.</li>
+  </ol>
+</div>
+{% endblock %}

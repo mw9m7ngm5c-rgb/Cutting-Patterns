@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Sawing patterns</h1>
+<div id="pattern-app" data-ds="{{ ds.id }}"
+     data-thicknesses="{{ sizes.thicknesses|tojson|forceescape }}" data-widths="{{ sizes.widths|tojson|forceescape }}">
+<div class="pattern-layout">
+
+  <!-- left: choose, list, build -->
+  <div>
+    <div class="panel">
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr">
+        <label class="field">Production line
+          <select id="line">{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+        <label class="field">Log class
+          <select id="cls">{% for c in classes %}<option value="{{ c.id }}" data-no="{{ c.no }}">{{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm</option>{% endfor %}</select></label>
+      </div>
+      <h3>Patterns for this class</h3>
+      <ul class="pattern-list" id="list"></ul>
+      <button type="button" class="secondary" id="new">New pattern</button>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Build</h3>
+      <p class="help">Click a size to add it to the part chosen below, or drag it onto the diagram: beside the cant for a sideboard,
+        onto the cant for a cant board. Sizes are dry sizes.</p>
+      <div class="zones" id="zones">
+        <label><input type="radio" name="zone" value="left"> Left sideboards</label>
+        <label><input type="radio" name="zone" value="sec" checked> Cant boards</label>
+        <label><input type="radio" name="zone" value="right"> Right sideboards</label>
+      </div>
+      <label class="check"><input type="checkbox" id="symmetric" checked> Same sideboards both sides</label>
+      <div><small class="help">Cant width</small><div class="palette" id="cants"></div></div>
+      <div><small class="help">Board thickness</small><div class="palette" id="thicks"></div></div>
+      <button type="button" class="secondary" id="undo">Remove last board</button>
+      <button type="button" class="secondary" id="clear">Clear</button>
+      <p class="help" id="builder-note"></p>
+    </div>
+  </div>
+
+  <!-- middle: notation and diagram -->
+  <div>
+    <div class="panel notation">
+      <div class="form-grid" style="grid-template-columns: 1fr 1.6fr">
+        <label class="field">Primary <span class="unit">sideboards / cant width / sideboards</span><input id="primary" autocomplete="off" spellcheck="false"></label>
+        <label class="field">Secondary <span class="unit">boards across the cant, bottom to top</span><input id="secondary" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <p class="help">Notation: <code>25 38/114/38 25</code> · <code>2*19 3*38 3*19</code> (n*t is n boards of t mm) ·
+        <code>&lt; &gt;</code> riving knives · <code>,</code> arris blade.</p>
+      <div class="problems" id="problems"></div>
+      <div style="margin-top:.6rem; display:flex; gap:.4rem; flex-wrap:wrap">
+        <button type="button" id="save">Save</button>
+        <button type="button" class="secondary" id="saveas">Save as new pattern</button>
+        <button type="button" class="danger" id="delete">Delete</button>
+        <span class="grid-status" id="save-status"></span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="log-step">
+        <button type="button" class="secondary" id="prev" title="Previous log">◀</button>
+        <select id="log"></select>
+        <button type="button" class="secondary" id="next" title="Next log">▶</button>
+        <span class="log-facts" id="log-facts"></span>
+      </div>
+      <div id="diagram-box"></div>
+      <p class="help">Seen from the small end. Solid outline: large end. Dashed: small end. Grey bands: saw kerfs.
+        Boards are labelled thickness × width × length (dry sizes).</p>
+    </div>
+  </div>
+
+  <!-- right: results -->
+  <div>
+    <div class="panel">
+      <h3 style="margin-top:0">This log</h3>
+      <div id="log-result"><p class="help">Type or pick a pattern.</p></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Whole class</h3>
+      <button type="button" id="run-class">Run the class</button>
+      <div id="class-result"></div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/pattern.js"></script>{% endblock %}

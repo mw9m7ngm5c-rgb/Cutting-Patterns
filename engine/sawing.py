@@ -265,3 +265,37 @@ def simulate_pattern(logs: list[Log], primary: str, secondary: str, products: Pr
     results = [simulate_log(log, pattern, products, line, settings, rules, lay) for log in logs]
     return PatternResult(primary, secondary, results, log_price, settings.chip_price,
                          settings.sawdust_price, settings.pct_fines)
+
+
+def check_pattern(primary: str, secondary: str, products: Products, line: ProductionLine) -> list[str]:
+    """Plain-language problems that stop this pattern being sawn on this line; empty when it can be.
+
+    Covers notation errors, sizes the dataset does not define, a cant with nothing to saw it into,
+    and features that arrive in a later phase.
+    """
+    try:
+        pattern = notation.parse(primary, secondary)
+    except notation.PatternError as e:
+        return [str(e)]
+    problems: list[str] = []
+    if pattern.primary.cant is not None:
+        try:
+            products.width(pattern.primary.cant)
+        except KeyError:
+            problems.append(f"cant width {pattern.primary.cant:g} mm is not a width in this dataset")
+        if not pattern.secondary.items:
+            problems.append("a cant pattern needs a secondary pattern (the boards across the cant)")
+    for item in (*pattern.primary.left.items, *pattern.primary.right.items, *pattern.secondary.items):
+        try:
+            products.thickness(item.thickness)
+        except KeyError:
+            msg = f"thickness {item.thickness:g} mm is not a thickness in this dataset"
+            if msg not in problems:
+                problems.append(msg)
+    if problems:
+        return problems
+    try:
+        layout(pattern, products, line)
+    except NotImplementedError as e:
+        problems.append(str(e))
+    return problems

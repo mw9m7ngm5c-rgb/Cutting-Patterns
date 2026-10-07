@@ -1,6 +1,6 @@
 # Assumptions register
 
-Every rule the engine uses that I had to infer rather than read. Each entry says what the rule is, where it came from and how sure I am. Updated at the end of Phase 1.
+Every rule the engine uses that I had to infer rather than read. Each entry says what the rule is, where it came from and how sure I am. Updated at the end of Phase 2 (section G is new).
 
 Status key:
 
@@ -64,7 +64,7 @@ Where Phase 1 landed against the run: 719 of 730 boards have the same product an
 | A-31 | Saw type codes: 0 cant/live, 1 cant/live grouped, 2 chipper-profiler, 3 chipper-profiler grouped. | Confirmed | `saw_types` table. |
 | A-32 | Cant guiding codes: 0 none, 1 half taper, 2 full taper. | Open | 0 matches the run. The order of the other two is a guess. |
 | A-33 | Simsaw's log generator cannot be reproduced seed for seed. The 200 Ngomi logs are imported as data. | Open by nature | Its random number generator is not documented. |
-| A-34 | The template dataset has no wane rows. A product with no wane rule is cut with no wane allowed. | Ours | New datasets in the app will instead start from the owner's defaults (no wane on 38 and 50 mm; 10 % and 30 % on 19 and 25 mm). |
+| A-34 | The template dataset has no wane rows. A product with no wane rule is cut with no wane allowed. | Ours | New datasets in the app start from the owner's defaults instead (A-40). |
 
 ## E. Built in Phase 1 but checked on simple shapes only
 
@@ -85,3 +85,18 @@ No reference results exist for these, so they are tested on cylinders and plain 
 The Ngomi line has a three-blade edger set to "Best". The engine currently treats it as a two-blade edger; Simsaw's own run shows no second boards either, so the results agree.
 
 A second Simsaw dataset with a run that uses some of section F (the course's Problem 3 scenarios would do) would turn most of it into testable rules.
+
+## G. Phase 2: app and log generator
+
+| ID | Rule | Status | Evidence |
+| --- | --- | --- | --- |
+| A-35 | Log generator: a normal distribution is centred between the limits with a standard deviation that puts 95 % (or 65 %) of draws inside them (half-range ÷ 1.960, or ÷ 0.935). Draws are **not** clipped to the limits, only kept physically possible (diameter and ovality above zero; taper, sweep and core not negative). | Fitted | Simsaw's Ngomi logs fall outside their normal limits about as often as this predicts (A-30). A test confirms 95.0 % and 65.0 % inside on 200 000 draws. |
+| A-36 | Generated lengths fall on the length step between the limits: uniform picks a step at random; normal draws are rounded to the nearest step and clipped to the range. Diameter is rounded to 0.1 cm, taper to 0.1 mm/m, ovality to 0.01. Sweep is drawn in mm/m and stored as total mm (× length); defect core is drawn in % of SED and stored in cm. | Ours | Simsaw's generated Ngomi logs use 0.1 cm and 0.01 steps and lengths on the 0.3 m grid. The unit conversions follow A-26 and A-27. |
+| A-37 | With "use this seed" off, the app draws a fresh seed and records it in the generator settings, so the batch can be repeated. | Ours | Keeps every draw on one seeded generator, as the brief requires. |
+| A-38 | A log class with no grades ticked accepts every log grade. | Ours | Simsaw's table always lists at least one grade; an empty list should not silently exclude every log. |
+| A-39 | A size added in the app gets a product for every length class and board grade, switched on, priced R0 and flagged as a placeholder. | Ours | No price may be invented (brief section 11). R0 is obviously wrong in the reports, and the placeholder banner names it until it is replaced. |
+| A-40 | Default wane for a new size or dataset: no wane on thicknesses of 38 mm and up (0 % / 0 % / 0 %); 10 % thickness, 30 % width over 100 % of the length on thinner boards. | Read (owner, 7 Oct 2026) | Owner decision, SPEC section 12. Imported datasets keep their own wane rules. |
+| A-41 | A run's snapshot is one JSON document holding exactly what the engine is given, instead of Simsaw's set of `run_*` tables. | Ours | Equivalent for reports and re-runs, much simpler; tested to round-trip every input exactly. |
+| A-42 | Board report "length classes" groups boards by the dataset's named length classes; a board fitting more than one goes to the first, by shortest minimum. | Assumed | Simsaw's report options (simsaw.ini) list none / classified / detailed lengths without saying how "classified" groups. The Ngomi dataset has one length class, so the choice cannot be checked. |
+| A-43 | Combined one-liner and summary figures are volume-weighted: totals of volumes and values over the total log volume; the combined nett value weights each pattern's nett value by its log volume. | Ours | Gives the same answer as sawing all the logs as one batch. |
+| A-44 | Editing a placeholder (price, log price or any kerf on a line) clears its flag; the line's flag can also be set or cleared by hand. | Ours | |

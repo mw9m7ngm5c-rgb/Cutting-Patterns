@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Settings</h1>
+<form method="post" action="/d/{{ ds.id }}/settings">
+<div class="panel">
+  <h2 style="margin-top:0">Log volume</h2>
+  <p class="help">Log volume = π/4 × (D + ½ × L × taper)² × L. Each of D, L and taper can be the log's actual value or a nominal one.</p>
+  <div class="form-grid">
+    <label class="check"><input type="checkbox" name="use_nominal_diameter" {{ "checked" if st.use_nominal_diameter }}> Nominal diameter</label>
+    <label class="field">Rounded to
+      <select name="nominal_diameter">{% for v, l in store.NOMINAL_DIAMETER.items() %}<option value="{{ v }}" {{ "selected" if st.nominal_diameter == v }}>{{ l }}</option>{% endfor %}</select></label>
+    <label class="check"><input type="checkbox" name="use_nominal_length" {{ "checked" if st.use_nominal_length }}> Nominal length</label>
+    <label class="field">Rounded down to a step of <span class="unit">m</span><input name="nominal_length_incr_m" value="{{ st.nominal_length_incr_m }}"></label>
+    <label class="check"><input type="checkbox" name="use_nominal_taper" {{ "checked" if st.use_nominal_taper }}> Nominal taper</label>
+    <label class="field">Nominal taper <span class="unit">mm/m</span><input name="nominal_taper_mm_per_m" value="{{ st.nominal_taper_mm_per_m }}"></label>
+  </div>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Log model</h2>
+  <div class="form-grid">
+    <label class="field">Disc separation <span class="unit">cm (Simsaw default 10; Ngomi uses 5)</span><input name="disc_separation_cm" value="{{ st.disc_separation_cm }}"></label>
+    <label class="field">Points per disc <span class="unit">used when discs are polygons</span><input name="points_per_disc" value="{{ st.points_per_disc }}"></label>
+    <label class="check"><input type="checkbox" name="discretised" {{ "checked" if st.discretised }}> Store discs as polygons (otherwise exact ellipses)</label>
+    <label class="field">Random seed <span class="unit">for board grades (Phase 4)</span><input name="seed" value="{{ st.seed }}"></label>
+  </div>
+</div>
+<button type="submit">Save settings</button>
+</form>
+{% endblock %}

@@ -1,0 +1,100 @@
+"""Data for the sawing-pattern screen: the end-view diagram of one log and the results of a class."""
+from __future__ import annotations
+
+from engine import notation
+from engine.log import build_core_sections, build_sections
+from engine.model import Log, PatternResult
+from engine.sawing import check_pattern, layout, simulate_log, simulate_pattern
+from importers.simsaw import Dataset
+
+KIND = {0: "Left sideboard", 1: "Right sideboard", 2: "Cant board"}
+
+
+def _r(v: float, nd: int = 2) -> float:
+    return round(float(v), nd)
+
+
+def _outline(sec, index: int, points: int = 96) -> list[list[float]]:
+    return [[_r(x), _r(y)] for x, y in sec.outline(index, points)]
+
+
+def board_dict(b) -> dict:
+    return {"kind": KIND[b.board_type], "board_type": b.board_type, "board_no": b.board_no, "label": b.label,
+            "thickness": b.thickness, "width": b.width, "length_m": b.length_m, "left": _r(b.left), "right": _r(b.right),
+            "bottom": _r(b.bottom), "top": _r(b.top), "front_m": _r(b.front_m), "back_m": _r(b.back_m),
+            "resawn": b.resawn, "edged": b.edged, "dry_volume": b.dry_volume, "wet_volume": b.wet_volume, "value": b.value}
+
+
+def log_dict(g: Log) -> dict:
+    return {"no": g.no, "sed_cm": g.sed_cm, "length_m": g.length_m, "taper": g.taper_mm_per_m, "sweep_mm": g.sweep_mm,
+            "sweep_mm_per_m": _r(g.sweep_mm_per_m), "ovality": g.ovality, "defect_core_cm": g.defect_core_cm, "grade": g.grade}
+
+
+def diagram(ds: Dataset, line_name: str, log: Log, primary: str, secondary: str) -> dict:
+    """End view of one log sawn with one pattern, in the saw frame (mm, y up)."""
+    line = ds.line(line_name)
+    out: dict = {"log": log_dict(log), "problems": check_pattern(primary, secondary, ds.products, line)}
+    try:
+        sec = build_sections(log, ds.settings, line)
+    except NotImplementedError as e:
+        out["problems"].append(str(e))
+        return out
+    out["small_end"] = _outline(sec, 0)
+    out["large_end"] = _outline(sec, len(sec.z_mm) - 1)
+    if log.defect_core_cm > 0:
+        core = build_core_sections(log, ds.settings)
+        out["core"] = _outline(core, 0)
+    if out["problems"]:
+        return out
+    pattern = notation.parse(primary, secondary)
+    lay = layout(pattern, ds.products, line)
+    lr = simulate_log(log, pattern, ds.products, line, ds.settings, lay=lay)
+    half_cant = (lay.cant_hi - lay.cant_lo) / 2.0
+    out.update({
+        "cant": {"lo": lay.cant_lo, "hi": lay.cant_hi, "wet": lay.cant.wet, "dry": lay.cant.dry},
+        "primary_kerfs": [[_r(a), _r(b)] for a, b in lay.primary_kerfs],
+        "secondary_kerfs": [[_r(a), _r(b)] for a, b in lay.secondary_kerfs],
+        "half_cant": half_cant,
+        "blades": blade_positions(lay),
+        "boards": [board_dict(b) for b in lr.boards],
+        "result": {"log_volume": lr.log_volume, "dry_volume": lr.dry_board_volume, "wet_volume": lr.wet_board_volume,
+                   "value": lr.board_value, "sawdust": lr.sawdust_volume, "chips": lr.chip_volume,
+                   "shrinkage": lr.shrinkage_volume, "boards": len(lr.boards),
+                   "dry_recovery": lr.dry_board_volume / lr.log_volume if lr.log_volume else 0.0},
+    })
+    return out
+
+
+def blade_positions(lay) -> dict:
+    """Sawn faces as distances from the centreline (wet sizes, mm): what the saw doctor sets."""
+    return {"primary": [_r(v, 1) for v in lay.primary_blades()], "secondary": [_r(v, 1) for v in lay.secondary_blades()]}
+
+
+def pattern_result_dict(res: PatternResult) -> dict:
+    mix_total = sum(d["dry_volume"] for d in res.product_mix().values()) or 1.0
+    return {
+        "logs": len(res.logs), "log_volume": res.log_volume, "dry_recovery": res.dry_recovery,
+        "wet_recovery": res.wet_recovery, "gross_value": res.gross_value_recovery, "nett_value": res.nett_value_recovery,
+        "boards": res.board_count, "boards_per_log": res.board_count / len(res.logs) if res.logs else 0.0,
+        "average_length": res.average_length_m,
+        "sawdust": sum(r.sawdust_volume for r in res.logs), "chips": sum(r.chip_volume for r in res.logs),
+        "dry_volume": sum(r.dry_board_volume for r in res.logs), "wet_volume": sum(r.wet_board_volume for r in res.logs),
+        "mix": [{"thickness": t, "width": w, "pieces": int(d["count"]), "dry_volume": d["dry_volume"],
+                 "share": d["dry_volume"] / mix_total} for (t, w), d in res.product_mix().items()],
+        "per_log": [{"no": r.log.no, "sed_cm": r.log.sed_cm, "length_m": r.log.length_m, "log_volume": r.log_volume,
+                     "boards": len(r.boards), "dry_volume": r.dry_board_volume,
+                     "dry_recovery": r.dry_board_volume / r.log_volume if r.log_volume else 0.0, "value": r.board_value}
+                    for r in res.logs],
+    }
+
+
+def class_result(ds: Dataset, line_name: str, class_no: int, primary: str, secondary: str) -> dict:
+    line = ds.line(line_name)
+    problems = check_pattern(primary, secondary, ds.products, line)
+    if problems:
+        return {"problems": problems}
+    logs = ds.logs_in_class(class_no)
+    if not logs:
+        return {"problems": ["no logs fall in this class"]}
+    res = simulate_pattern(logs, primary, secondary, ds.products, line, ds.settings, ds.log_class(class_no).log_price)
+    return {"problems": [], **pattern_result_dict(res)}

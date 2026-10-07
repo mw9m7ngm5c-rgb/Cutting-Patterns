@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Products</h1>
+<div class="tabs">
+  {% for key, label in tabs.items() %}<a href="?tab={{ key }}" class="{{ 'active' if tab == key }}">{{ label }}</a>{% endfor %}
+</div>
+{% if tab == "sizes" %}
+  <p class="help">Dry (nominal) sizes are what patterns and prices refer to. Wet sizes are the green targets the saws are set to.
+    Adding a size creates its products, wane rules and grade outputs.</p>
+  <div class="row">
+    <div><h2>Thicknesses</h2><div class="grid" data-url="/api/d/{{ ds.id }}/grid/thicknesses"></div></div>
+    <div><h2>Widths</h2><div class="grid" data-url="/api/d/{{ ds.id }}/grid/widths"></div></div>
+    <div><h2>Length classes</h2><div class="grid" data-url="/api/d/{{ ds.id }}/grid/length_classes"></div></div>
+  </div>
+  <div class="row">
+    <div><h2>Log grades</h2><div class="grid" data-url="/api/d/{{ ds.id }}/grid/log_grades"></div></div>
+    <div><h2>Board grades</h2><div class="grid" data-url="/api/d/{{ ds.id }}/grid/board_grades"></div></div>
+  </div>
+{% elif tab == "prices" %}
+  <div class="grid" data-url="/api/d/{{ ds.id }}/grid/combinations"></div>
+{% elif tab == "wane" %}
+  <div class="grid" data-url="/api/d/{{ ds.id }}/grid/wane"></div>
+{% elif tab == "centre" %}
+  <div class="grid" data-url="/api/d/{{ ds.id }}/grid/centre_boards"></div>
+{% elif tab == "grades" %}
+  <div class="grid" data-url="/api/d/{{ ds.id }}/grid/grade_outputs"></div>
+{% elif tab == "residues" %}
+  <div class="panel" style="max-width: 40rem">
+    <form method="post" action="/d/{{ ds.id }}/residues">
+      <div class="form-grid">
+        <label class="field">Chip price <span class="unit">R/m³</span><input name="chip_price" value="{{ st.chip_price }}" inputmode="decimal"></label>
+        <label class="field">Sawdust price <span class="unit">R/m³</span><input name="sawdust_price" value="{{ st.sawdust_price }}" inputmode="decimal"></label>
+        <label class="field">Fines in the chips <span class="unit">%</span><input name="pct_fines" value="{{ st.pct_fines }}" inputmode="decimal"></label>
+      </div>
+      <p class="help">Nett value recovery adds chips (less fines) and sawdust at these prices and deducts the log price.</p>
+      <button type="submit">Save</button>
+    </form>
+  </div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/grid.js"></script>{% endblock %}

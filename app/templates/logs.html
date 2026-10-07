@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Logs</h1>
+<h2>Log classes</h2>
+<div class="grid" data-url="/api/d/{{ ds.id }}/grid/log_classes"></div>
+
+<h2>Logs</h2>
+<p class="help">SED is the small-end diameter. Sweep is stored as the total deviation of the centreline in mm and defect core as a diameter
+  in cm, as in Simsaw; the class limits use mm/m and % of SED.</p>
+<div class="grid" data-url="/api/d/{{ ds.id }}/grid/logs" id="logs-grid"></div>
+
+<h2>Log generator</h2>
+<div class="panel">
+  <p class="help">Draws ideal logs between the limits. Normal distributions are centred between the limits with the stated share of logs
+    inside them; the rest fall outside, as in Simsaw. With a fixed seed the same settings always give the same logs.</p>
+  <form method="post" action="/d/{{ ds.id }}/logs/generate">
+    <table class="data">
+      <thead><tr><th class="text">Property</th><th>From</th><th>To</th><th class="text">Distribution</th></tr></thead>
+      <tbody>
+      {% for key, label, unit in [("diameter", "Small-end diameter", "cm"), ("length", "Length", "m"),
+                                  ("taper", "Taper", "mm/m"), ("sweep", "Sweep", "mm/m"), ("ovality", "Ovality", ""),
+                                  ("defect_core", "Defect core", "% of SED")] %}
+        <tr>
+          <td class="text">{{ label }} {% if unit %}<span class="tag">{{ unit }}</span>{% endif %}</td>
+          <td><input name="min_{{ key }}" value="{{ gen['min_' ~ key] }}" inputmode="decimal" size="7" required></td>
+          <td><input name="max_{{ key }}" value="{{ gen['max_' ~ key] }}" inputmode="decimal" size="7" required></td>
+          <td class="text"><select name="{{ key }}_distr">
+            {% for v, l in store.DISTRIBUTIONS.items() %}<option value="{{ v }}" {{ "selected" if gen[key ~ '_distr'] == v }}>{{ l }}</option>{% endfor %}
+          </select></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="form-grid" style="margin-top:.8rem">
+      <label class="field">Length step <span class="unit">m</span><input name="length_incr" value="{{ gen.length_incr }}" inputmode="decimal"></label>
+      <label class="field">Number of logs<input name="no_of_logs" value="{{ gen.no_of_logs }}" inputmode="numeric"></label>
+      <label class="field">Log grade
+        <select name="log_grade_id">{% for g in grades %}<option value="{{ g.id }}" {{ "selected" if gen.log_grade_id == g.id }}>{{ g.name }}</option>{% endfor %}</select></label>
+      <label class="field">Seed<input name="seed" value="{{ gen.seed }}" inputmode="numeric"></label>
+      <label class="check"><input type="checkbox" name="fixed_seed" {{ "checked" if gen.fixed_seed }}> Use this seed (otherwise a new one is drawn and recorded)</label>
+      <label class="field">Existing logs
+        <select name="mode"><option value="replace">Replace all logs</option><option value="add">Add to the logs</option></select></label>
+    </div>
+    <p style="margin-top:1rem"><button type="submit" onclick="return this.form.mode.value !== 'replace' || confirm('Replace every log in this dataset?')">Generate logs</button></p>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/grid.js"></script>
+<script>
+// class numbers in the logs table depend on the class limits: reload it after the classes are saved
+document.addEventListener("grid:saved", e => {
+  if (!e.target.dataset.url.endsWith("log_classes")) return;
+  const g = grids.find(g => g.el.id === "logs-grid"); if (g && !g.dirty) g.load();
+});
+</script>{% endblock %}

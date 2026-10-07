@@ -1,6 +1,6 @@
 # Sawing pattern simulator and generator: specification
 
-Status: Phase 1 (engine and command line) complete; awaiting sign-off before Phase 2. Phase 1 results are in section 13.
+Status: Phase 2 (web app) complete; awaiting sign-off before Phase 3. Phase 1 results are in section 13, Phase 2 in section 14.
 Companion document: `ASSUMPTIONS.md` (every rule here that was inferred rather than read is listed there with its evidence).
 
 ## 1. Purpose
@@ -56,7 +56,15 @@ engine/      standalone package: no web, no database, no file I/O beyond explici
   sawing.py      saw-line layout, primary and secondary breakdown, resaw, sawdust
   edging.py      edger, cross-cut, wane test
   generator.py   enumeration, pre-screen, ranking  (Phase 3)
-app/         FastAPI routes, Jinja2 templates, static (vanilla JS, inline SVG), SQLAlchemy models, Alembic
+  loggen.py      log generator (seeded ranges and distributions)
+app/         the web app; calls the engine, never the other way round
+  models.py      SQLAlchemy tables (section 6)          db.py        connection, migrations on start
+  store.py       database <-> engine, new / import / duplicate datasets
+  tables.py      column definitions behind every editable table
+  simview.py     pattern-screen diagram and class results
+  runs.py        batch runs in a background thread      reports.py   reports and Excel export
+  snapshot.py    a run's inputs as JSON                 main.py      routes; __main__.py start command
+  templates/, static/ (grid.js, pattern.js, app.css), migrations/ (Alembic)
 importers/   Simsaw .mdb import (access-parser)
 cli.py       simulate / generate commands; calls the engine only
 tests/       unit tests + fixtures
@@ -183,9 +191,9 @@ SQLite tables mirror the Simsaw schema so that datasets import without loss. A `
 | `production_line` | every field of Simsaw's `production_line`, including min/max/increment triplets for rotation, alignment and offsets. |
 | `saw_pattern` | line, log class, pattern number, primary, secondary, source (manual / generated). |
 | `setting` | nominal options, disc separation, points per disc, seed, residue prices, % fines. |
-| `run`, `run_*` | A batch run copies every input it used into `run_*` tables, then stores `run_log_result` and `run_board_result`. Reports read only `run_*`. |
+| `run`, `run_*` | A batch run copies every input it used into `run.snapshot` (one JSON document holding exactly the engine inputs: products, wane, classes, logs, lines, patterns, settings), then stores `run_pattern`, `run_log_result` and `run_board_result`. The run saws from its snapshot, not the live tables, and reports read only the run's own tables. Simsaw's separate `run_*` input tables are folded into the snapshot when a run is imported. |
 
-Additions beyond Simsaw: `saw_pattern.source`, generator job tables (constraints, candidates, scores), and `dataset.name`.
+Additions beyond Simsaw: `saw_pattern.source` (manual / imported / generated), `dataset.name` and notes, placeholder flags on product prices, log prices and line kerfs, labels for the primary and secondary machine, `run.source` (app or imported Simsaw results) and run status and progress. Generator job tables arrive in Phase 3.
 
 ## 7. Generator
 
@@ -295,3 +303,47 @@ python cli.py simulate --dataset "reference/ngomi 1.mdb"
 python cli.py simulate --dataset "reference/ngomi 1.mdb" --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
 python cli.py simulate --dataset "reference/ngomi 1.mdb" --pattern "25/114/25" "2*19 3*38 3*19" --log 8 --boards
 ```
+
+## 14. Phase 2 results
+
+Web app on top of the Phase 1 engine. The engine gained a log generator (`engine/loggen.py`) and a plain-language pattern check (`check_pattern`); its sawing rules are unchanged. 188 tests pass (150 from Phase 1, 38 new).
+
+### 14.1 Start it
+
+```
+python -m app                       opens http://127.0.0.1:8000 in the browser
+python -m app import "reference/ngomi 1.mdb" --name "Ngomi"
+```
+
+The database is `data/cutting_patterns.db` (change with `--db` or `CP_DB`). Migrations run on every start.
+
+### 14.2 Screens
+
+| Screen | What works |
+| --- | --- |
+| Datasets | New (Ngomi defaults, placeholders flagged), open, rename and notes, save as (deep copy including runs), delete, import a Simsaw `.mdb` (inputs, generator, grade outputs, class grades and every batch run with Simsaw's own results). |
+| Logs | Log classes table with accepted grades and live log count; logs table with class shown, add, delete, paste from Excel; log generator with three distributions per property, fixed or recorded seed, replace or add. |
+| Products | Tabs for sizes and grades, products and prices, wane, centre boards, grade outputs, residue prices. Adding a size creates its products (on, R0, flagged placeholder), wane rule (owner default) and grade outputs. |
+| Machines | Production lines; tabs for the line, primary, secondary, and edging/cross-cut/resaw. Phase 4 settings are shown and marked; the engine refuses non-zero values with a message. |
+| Sawing patterns | Line and class pickers; pattern list with a ready / cannot-saw flag; notation typed directly with live checking; builder by clicking or dragging sizes onto the diagram (symmetric sideboards by default); SVG end view with small- and large-end outlines, kerfs and labelled boards; step through the class's logs; single-log results; whole-class run with product mix and per-log table. |
+| Batch runs | Name, choose lines and classes, background run with live progress, cancel (partial results kept), delete. A pattern that cannot be sawn is reported in the run, not fatal. |
+| Reports | One-liner, board report (one pattern or combined; lengths none / length classes / every length), summary volume balance. Print styles. Excel export with six sheets (one-liner, boards by pattern, boards combined, summary, per log, inputs). |
+| Settings | Nominal diameter, length and taper options, disc separation, points per disc, ellipses or polygons, seed. |
+
+Placeholder values (prices, log prices, kerfs) are flagged in the database, shown in italics in the tables and listed in a banner on every page until they are replaced.
+
+### 14.3 Checks
+
+- An imported Ngomi dataset hands the engine exactly the objects the `.mdb` loader does (logs, lines, settings, products, wane, classes, patterns), so app runs equal the Phase 1 CLI: 54.10 / 52.37 / 56.23 %, boards 248 / 217 / 265.
+- The imported Simsaw run reproduces Simsaw's one-liner from its stored per-log and per-board results: 54.0 / 52.3 / 56.2 % dry, 61.6 / 59.8 / 64.0 % wet, nett R2 040.04 / R1 971.66 / R2 129.20.
+- A run saws from its snapshot: changing prices after starting a run does not change its results (tested).
+- The pattern-screen API reproduces the worked example (log 8 on `25/114/25`): cant −60 to 60, sideboard 63 to 90, the 38s at −76.5/−35.5, −32.5/8.5, 11.5/52.5, log volume 0.105927 m³.
+- Every page renders; the grid validates before writing and writes nothing if any row is wrong; generated logs repeat with a fixed seed.
+- Checked in a real browser (Chromium): builder clicks and drag-and-drop, paste of two Excel rows, save, batch run with progress, all three reports. No script errors.
+
+Speed: the 106 logs of the Ngomi run take about 2.7 s as a batch run including database writes; a class of 36 logs on the pattern screen about 0.8 s.
+
+### 14.4 Not tested here
+
+- Importing an actual `.mdb` through the web page. `reference/` is not in this repository, so the tests import the JSON fixtures exported from `ngomi 1.mdb`. The upload goes through the same importer as the Phase 1 `.mdb` path (`access-parser`), which was run against the real file in Phase 1.
+- The start command on macOS and Windows. It uses only portable pieces (uvicorn, SQLite, `webbrowser`), but it was run on Linux only.
