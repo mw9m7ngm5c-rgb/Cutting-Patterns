@@ -115,6 +115,7 @@ def board_report(s: Session, run: m.Run, pattern_id: int | None, lengths: str) -
     ids = list(s.scalars(q))
     log_volume = sum(lr.log_volume for lr in s.scalars(select(m.RunLogResult).where(m.RunLogResult.run_pattern_id.in_(ids))))
     groups: dict[tuple, dict] = defaultdict(lambda: {"pieces": 0, "dry_volume": 0.0, "wet_volume": 0.0, "value": 0.0})
+    graded = snap.products.grades_in_use
     for b in s.scalars(select(m.RunBoardResult).where(m.RunBoardResult.run_pattern_id.in_(ids))):
         if lengths == "detailed":
             key = (b.thickness, b.width, round(b.length_m, 2))
@@ -122,6 +123,7 @@ def board_report(s: Session, run: m.Run, pattern_id: int | None, lengths: str) -
             key = (b.thickness, b.width, _length_label(b.length_m, classes))
         else:
             key = (b.thickness, b.width, "")
+        key += (b.grade if graded else "",)
         g = groups[key]
         g["pieces"] += 1
         g["dry_volume"] += b.dry_volume
@@ -129,9 +131,21 @@ def board_report(s: Session, run: m.Run, pattern_id: int | None, lengths: str) -
         g["value"] += b.value
     sawn = sum(g["dry_volume"] for g in groups.values()) or 1.0
     rows = []
-    for (t, w, ln), g in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1], str(kv[0][2]))):
-        rows.append({"thickness": t, "width": w, "length": ln, **g,
+    for (t, w, ln, grade), g in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1], str(kv[0][2]), kv[0][3])):
+        rows.append({"thickness": t, "width": w, "length": ln, "grade": grade, **g,
                      "share_sawn": g["dry_volume"] / sawn, "share_log": g["dry_volume"] / log_volume if log_volume else 0.0})
+    return rows
+
+
+def compare(a: list[PatternSummary], b: list[PatternSummary]) -> list[dict]:
+    """Patterns of two runs side by side, matched on class and pattern text."""
+    key = lambda p: (p.rp.class_no, p.rp.primary, p.rp.secondary)
+    other = {key(p): p for p in b}
+    rows = []
+    for p in a:
+        q = other.pop(key(p), None)
+        rows.append({"a": p, "b": q})
+    rows += [{"a": None, "b": q} for q in other.values()]
     return rows
 
 
@@ -185,15 +199,16 @@ def excel(s: Session, run: m.Run) -> bytes:
     rows = []
     for p in pats:
         for r in board_report(s, run, p.rp.id, "detailed"):
-            rows.append((p.rp.class_no, p.rp.primary, p.rp.secondary, r["thickness"], r["width"], r["length"],
+            rows.append((p.rp.class_no, p.rp.primary, p.rp.secondary, r["thickness"], r["width"], r["length"], r["grade"],
                          r["pieces"], r["dry_volume"], r["wet_volume"], r["value"], r["share_sawn"], r["share_log"]))
-    sheet(ws, ["Class", "Primary", "Secondary", "Thickness (mm)", "Width (mm)", "Length (m)", "Pieces", "Dry m³",
+    sheet(ws, ["Class", "Primary", "Secondary", "Thickness (mm)", "Width (mm)", "Length (m)", "Grade", "Pieces", "Dry m³",
                "Wet m³", "Value (R)", "Share of sawn", "Share of log"], rows,
           {"Dry m³": "0.0000", "Wet m³": "0.0000", "Value (R)": "#,##0.00", "Share of sawn": "0.0%", "Share of log": "0.0%"})
 
     ws = wb.create_sheet("Boards combined")
-    sheet(ws, ["Thickness (mm)", "Width (mm)", "Pieces", "Dry m³", "Wet m³", "Value (R)", "Share of sawn", "Share of log"],
-          [(r["thickness"], r["width"], r["pieces"], r["dry_volume"], r["wet_volume"], r["value"], r["share_sawn"],
+    sheet(ws, ["Thickness (mm)", "Width (mm)", "Grade", "Pieces", "Dry m³", "Wet m³", "Value (R)", "Share of sawn",
+               "Share of log"],
+          [(r["thickness"], r["width"], r["grade"], r["pieces"], r["dry_volume"], r["wet_volume"], r["value"], r["share_sawn"],
             r["share_log"]) for r in board_report(s, run, None, "none")],
           {"Dry m³": "0.0000", "Wet m³": "0.0000", "Value (R)": "#,##0.00", "Share of sawn": "0.0%", "Share of log": "0.0%"})
 

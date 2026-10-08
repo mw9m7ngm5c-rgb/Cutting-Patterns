@@ -16,6 +16,7 @@
     <select name="lengths" onchange="this.form.submit()">{% for k, l in length_modes.items() %}<option value="{{ k }}" {{ "selected" if lengths == k }}>{{ l }}</option>{% endfor %}</select></label>
   {% endif %}
   <span style="flex:1"></span>
+  <a class="button secondary" href="/d/{{ ds.id }}/compare?a={{ cur.id }}">Compare with another run</a>
   <button type="button" class="secondary" onclick="print()">Print</button>
   <a class="button" href="/d/{{ ds.id }}/reports/{{ cur.id }}/excel">Excel</a>
 </form>
@@ -46,16 +47,17 @@
 
 {% elif view == "boards" %}
 {% for p, rows in board_rows %}
+{% set graded = rows|selectattr("grade")|list|length > 0 %}
 <table class="data">
   <thead><tr><th>Thickness<span class="unit">mm</span></th><th>Width<span class="unit">mm</span></th>{% if lengths != "none" %}<th class="text">Length{% if lengths == "detailed" %}<span class="unit">m</span>{% endif %}</th>{% endif %}
-    <th>Pieces</th><th>Dry volume<span class="unit">m³</span></th><th>Wet volume<span class="unit">m³</span></th><th>Value<span class="unit">R</span></th><th>Share of sawn</th><th>Share of log</th></tr></thead>
+    {% if graded %}<th class="text">Grade</th>{% endif %}<th>Pieces</th><th>Dry volume<span class="unit">m³</span></th><th>Wet volume<span class="unit">m³</span></th><th>Value<span class="unit">R</span></th><th>Share of sawn</th><th>Share of log</th></tr></thead>
   <tbody>
   {% for r in rows %}
     <tr><td>{{ r.thickness|num(0) }}</td><td>{{ r.width|num(0) }}</td>{% if lengths != "none" %}<td class="text">{{ r.length }}</td>{% endif %}
-      <td>{{ r.pieces }}</td><td>{{ r.dry_volume|num(4) }}</td><td>{{ r.wet_volume|num(4) }}</td><td>{{ r.value|num }}</td>
+      {% if graded %}<td class="text">{{ r.grade }}</td>{% endif %}<td>{{ r.pieces }}</td><td>{{ r.dry_volume|num(4) }}</td><td>{{ r.wet_volume|num(4) }}</td><td>{{ r.value|num }}</td>
       <td>{{ r.share_sawn|pct }}</td><td>{{ r.share_log|pct }}</td></tr>
   {% endfor %}
-    <tr class="total"><td class="text" colspan="{{ 3 if lengths != 'none' else 2 }}">Total</td>
+    <tr class="total"><td class="text" colspan="{{ (3 if lengths != 'none' else 2) + (1 if graded else 0) }}">Total</td>
       <td>{{ rows|sum(attribute="pieces") }}</td><td>{{ rows|sum(attribute="dry_volume")|num(4) }}</td>
       <td>{{ rows|sum(attribute="wet_volume")|num(4) }}</td><td>{{ rows|sum(attribute="value")|num }}</td>
       <td>{{ rows|sum(attribute="share_sawn")|pct }}</td><td>{{ rows|sum(attribute="share_log")|pct }}</td></tr>

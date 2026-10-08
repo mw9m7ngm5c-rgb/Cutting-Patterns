@@ -7,7 +7,7 @@ from engine.model import Log, PatternResult
 from engine.sawing import check_pattern, layout, simulate_log, simulate_pattern
 from importers.simsaw import Dataset
 
-KIND = {0: "Left sideboard", 1: "Right sideboard", 2: "Cant board"}
+KIND = {0: "Left sideboard", 1: "Right sideboard", 2: "Cant board", 3: "Flitch"}
 
 
 def _r(v: float, nd: int = 2) -> float:
@@ -18,10 +18,13 @@ def _outline(sec, index: int, points: int = 96) -> list[list[float]]:
     return [[_r(x), _r(y)] for x, y in sec.outline(index, points)]
 
 
-def board_dict(b) -> dict:
+def board_dict(b, dy: float = 0.0) -> dict:
+    """dy: how far the secondary cuts sit above the datum at the small end; cant boards are drawn there."""
+    dy = dy if b.board_type == 2 else 0.0
     return {"kind": KIND[b.board_type], "board_type": b.board_type, "board_no": b.board_no, "label": b.label,
+            "piece": b.piece, "grade": b.grade, "core_share": b.core_share,
             "thickness": b.thickness, "width": b.width, "length_m": b.length_m, "left": _r(b.left), "right": _r(b.right),
-            "bottom": _r(b.bottom), "top": _r(b.top), "front_m": _r(b.front_m), "back_m": _r(b.back_m),
+            "bottom": _r(b.bottom + dy), "top": _r(b.top + dy), "front_m": _r(b.front_m), "back_m": _r(b.back_m),
             "resawn": b.resawn, "edged": b.edged, "dry_volume": b.dry_volume, "wet_volume": b.wet_volume, "value": b.value}
 
 
@@ -42,21 +45,25 @@ def diagram(ds: Dataset, line_name: str, log: Log, primary: str, secondary: str)
     out["small_end"] = _outline(sec, 0)
     out["large_end"] = _outline(sec, len(sec.z_mm) - 1)
     if log.defect_core_cm > 0:
-        core = build_core_sections(log, ds.settings)
+        core = build_core_sections(log, ds.settings, line)
         out["core"] = _outline(core, 0)
     if out["problems"]:
         return out
     pattern = notation.parse(primary, secondary)
     lay = layout(pattern, ds.products, line)
     lr = simulate_log(log, pattern, ds.products, line, ds.settings, lay=lay)
-    half_cant = (lay.cant_hi - lay.cant_lo) / 2.0
+    shift = lr.secondary_shift
+    dy0 = float(shift[0]) if shift is not None and len(shift) else 0.0
     out.update({
-        "cant": {"lo": lay.cant_lo, "hi": lay.cant_hi, "wet": lay.cant.wet, "dry": lay.cant.dry},
+        "cant": None if lay.live else {"lo": lay.cant_lo, "hi": lay.cant_hi, "wet": lay.cant.wet, "dry": lay.cant.dry},
         "primary_kerfs": [[_r(a), _r(b)] for a, b in lay.primary_kerfs],
-        "secondary_kerfs": [[_r(a), _r(b)] for a, b in lay.secondary_kerfs],
-        "half_cant": half_cant,
+        "secondary_kerfs": [[_r(a + dy0), _r(b + dy0)] for a, b in lay.secondary_kerfs],
+        "half_cant": 0.0 if lay.live else (lay.cant_hi - lay.cant_lo) / 2.0,
+        "secondary_shift": None if shift is None or not len(shift) or not any(abs(v) > 1e-6 for v in shift) else
+            {"small_end": _r(shift[0], 1), "middle": _r(shift[len(shift) // 2], 1), "large_end": _r(shift[-1], 1)},
+        "graded": ds.products.grades_in_use,
         "blades": blade_positions(lay),
-        "boards": [board_dict(b) for b in lr.boards],
+        "boards": [board_dict(b, dy0) for b in lr.boards],
         "result": {"log_volume": lr.log_volume, "dry_volume": lr.dry_board_volume, "wet_volume": lr.wet_board_volume,
                    "value": lr.board_value, "sawdust": lr.sawdust_volume, "chips": lr.chip_volume,
                    "shrinkage": lr.shrinkage_volume, "boards": len(lr.boards),
@@ -113,7 +120,7 @@ def setting_rows(lay, axis_label: str) -> list[dict]:
     centreline, wet sizes, mm) and the board or cant that follows it up to the next blade."""
     kerfs = sorted(lay.primary_kerfs if axis_label == "x" else lay.secondary_kerfs)
     pieces = [(f.lo, f.hi, "board", f.thickness) for f in lay.flitches if (f.kind != "cant") == (axis_label == "x")]
-    if axis_label == "x":
+    if axis_label == "x" and not lay.live:
         pieces.append((lay.cant_lo, lay.cant_hi, "cant", lay.cant))
     rows = []
     for n, (a, b) in enumerate(kerfs, 1):

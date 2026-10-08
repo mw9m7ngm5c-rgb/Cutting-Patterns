@@ -272,6 +272,12 @@ class DatasetSettings(Base):
     chip_price: Mapped[float] = mapped_column(Float, default=0.0)
     sawdust_price: Mapped[float] = mapped_column(Float, default=0.0)
     pct_fines: Mapped[float] = mapped_column(Float, default=0.0)
+    arris_small_end: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    real_logs: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    diameter_variation: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")   # % of radius
+    taper_variation: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")      # % of diameter
+    sweep_variation: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")      # mm
+    ovality_variation: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")    # % of ovality
 
 
 # ------------------------------------------------------------------ batch runs
@@ -343,6 +349,8 @@ class RunBoardResult(Base):
     resawn: Mapped[bool] = mapped_column(Boolean, default=False)
     resaw_position: Mapped[float] = mapped_column(Float, default=0.0)
     edged: Mapped[bool] = mapped_column(Boolean, default=False)
+    piece: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    core_share: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     grade: Mapped[str] = mapped_column(String(100), default="")
     dry_volume: Mapped[float] = mapped_column(Float)
     wet_volume: Mapped[float] = mapped_column(Float)

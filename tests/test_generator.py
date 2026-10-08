@@ -132,8 +132,9 @@ def test_errors_are_plain(ngomi):
         G.generate([], ds.products, ds.lines[0], ds.settings, 0)
     with pytest.raises(G.GeneratorError, match="target product"):
         G.generate(ds.logs[:3], ds.products, ds.lines[0], ds.settings, 0, G.Objective.TARGET)
-    with pytest.raises(G.GeneratorError, match="curve sawing"):
-        G.generate(ds.logs[:3], ds.products, ProductionLine(cant_guiding=1), ds.settings, 0)
+    curve = G.generate(ds.logs_in_class(2)[:4], ds.products, ProductionLine(cant_guiding=1), ds.settings, 0,
+                       simulate=4, top=2)
+    assert curve.ranked                                    # curve-sawing lines are searched like any other
 
 
 def test_representative_logs_span_the_step(ngomi):

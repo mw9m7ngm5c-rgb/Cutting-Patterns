@@ -6,6 +6,7 @@ its results stay meaningful after the dataset changes.
 from __future__ import annotations
 
 import atexit
+import dataclasses
 import json
 import multiprocessing
 import os
@@ -120,6 +121,8 @@ def execute(db: Database, job_id: int, parallel: bool = True) -> None:
             p = json.loads(job.params)
             ds = snapshot.loads(job.snapshot)
             line = ds.line(p["line_name"])
+            if not p.get("real_logs", True):
+                ds.settings = dataclasses.replace(ds.settings, variation=None)   # search on ideal logs
             c = constraints(p)
             obj = G.Objective(p.get("objective", "volume"))
             mapf = _map_fn(parallel)
@@ -132,7 +135,7 @@ def execute(db: Database, job_id: int, parallel: bool = True) -> None:
                     logs = ds.logs_in_class(int(p["class_no"]))
                     price = ds.log_class(int(p["class_no"])).log_price
                 res = G.generate(logs, ds.products, line, ds.settings, price, obj, c,
-                                 simulate=int(p.get("simulate", 80)), progress=progress,
+                                 simulate=int(p.get("simulate", 120)), progress=progress,
                                  cancelled=cancel.is_set, map_fn=mapf)
                 out = {"ranked": [ranked_dict(r) for r in res.ranked],
                        "meta": {"enumerated": res.enumerated, "prescreened": res.prescreened,

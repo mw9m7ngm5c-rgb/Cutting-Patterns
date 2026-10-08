@@ -237,8 +237,13 @@ function drawDiagram(d) {
 function renderLogResult(d) {
   const r = d.result;
   if (!r) { $("log-result").innerHTML = '<p class="help">Nothing sawn.</p>'; return; }
-  const rows = d.boards.map(b => `<tr><td class="text">${esc(b.kind)} ${b.board_no + 1}</td><td class="text">${esc(b.label)}${b.resawn ? ' <span class="tag">resawn</span>' : ""}</td>
+  const rows = d.boards.map(b => `<tr><td class="text">${esc(b.kind)} ${b.board_no + 1}${b.piece ? ` <span class="tag">${b.piece + 1}${b.piece === 1 ? "nd" : b.piece === 2 ? "rd" : "th"} board</span>` : ""}</td>
+    <td class="text">${esc(b.label)}${b.resawn ? ' <span class="tag">resawn</span>' : ""}${b.edged === false && b.board_type !== 2 ? ' <span class="tag">profiled</span>' : ""}</td>
+    ${d.graded ? `<td class="text">${esc(b.grade)}${b.core_share > 0 ? ` <span class="help">(${Math.round(100 * b.core_share)} % core)</span>` : ""}</td>` : ""}
     <td>${fmt(b.dry_volume * 1000, 2)}</td></tr>`).join("");
+  const shift = d.secondary_shift ? `<p class="help">Secondary cuts sit ${fmt(d.secondary_shift.small_end, 1)} mm above the log's datum at the small end,
+    ${fmt(d.secondary_shift.middle, 1)} mm in the middle and ${fmt(d.secondary_shift.large_end, 1)} mm at the large end (curve sawing, offset,
+    misalignment or arris alignment). Cant boards are drawn where they sit at the small end.</p>` : "";
   $("log-result").innerHTML = `
     <dl class="kv">
       <dt>Log volume</dt><dd>${fmt(r.log_volume, 4)} m³</dd>
@@ -250,7 +255,8 @@ function renderLogResult(d) {
       <dt>Sawdust</dt><dd>${fmt(r.sawdust, 4)} m³</dd>
       <dt>Chips</dt><dd>${fmt(r.chips, 4)} m³</dd>
     </dl>
-    <table class="data" style="margin-top:.6rem; width:100%"><thead><tr><th class="text">Board</th><th class="text">Size</th><th>Dry<span class="unit">litres</span></th></tr></thead>
+    ${shift}
+    <table class="data" style="margin-top:.6rem; width:100%"><thead><tr><th class="text">Board</th><th class="text">Size</th>${d.graded ? '<th class="text">Grade</th>' : ""}<th>Dry<span class="unit">litres</span></th></tr></thead>
     <tbody>${rows}</tbody></table>`;
 }
 

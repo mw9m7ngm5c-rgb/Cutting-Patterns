@@ -150,6 +150,7 @@ def _settings(src: Source) -> Settings:
         chip_price=_r(dbl.get("Chip price", 0.0)),
         sawdust_price=_r(dbl.get("Sawdust price", 0.0)),
         pct_fines=float(ints.get("Percentage fines", 0)),
+        arris_small_end=bool(ints.get("Arris from top x-sec", 1)),
     )
 
 
@@ -168,8 +169,15 @@ def _products(src: Source, prefix: str) -> Products:
             for r in src.table(prefix + "wane") if r["thickness_uid"] in th and r["width_uid"] in wd}
     centre = {(th[r["thickness_uid"]].dry, wd[r["width_uid"]].dry) for r in src.table("centre_boards")
               if not prefix and r["thickness_uid"] in th and r["width_uid"] in wd}
+    lgr = {r["grade_uid"]: r["grade"] for r in src.table(prefix + "log_grades")}
+    outputs = {(th[r["thickness_uid"]].dry, wd[r["width_uid"]].dry, lgr[r["log_grade_uid"]], gr[r["board_grade_uid"]]):
+               (float(r["zero_percent"]), float(r["fifty_percent"]), float(r["nine_nine_percent"]),
+                float(r["one_hundred_percent"]))
+               for r in src.table(prefix + "grade_outputs")
+               if r["thickness_uid"] in th and r["width_uid"] in wd and r["log_grade_uid"] in lgr
+               and r["board_grade_uid"] in gr}
     return Products(sorted(th.values(), key=lambda s: s.dry), sorted(wd.values(), key=lambda s: s.dry),
-                    list(ln.values()), combos, list(gr.values()) or ["All board grades"], wane, centre)
+                    list(ln.values()), combos, list(gr.values()) or ["All board grades"], wane, centre, outputs)
 
 
 def _lines(src: Source, prefix: str) -> list[ProductionLine]:

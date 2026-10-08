@@ -5,6 +5,7 @@ the stored inputs always agree.
 """
 from __future__ import annotations
 
+import dataclasses
 import threading
 import traceback
 
@@ -33,11 +34,16 @@ def _jobs(ds: Dataset, line_names: list[str] | None, class_nos: list[int] | None
 
 
 def create_run(db: Database, ds_id: int, name: str, line_names: list[str] | None = None,
-               class_nos: list[int] | None = None) -> int:
+               class_nos: list[int] | None = None, saw_on: str | None = None) -> int:
+    """A run of the dataset's patterns. saw_on names a production line whose machine settings saw
+    every chosen pattern instead of the pattern's own line (a scenario: same patterns, other machine)."""
     with db.session() as s:
         ds = store.engine_dataset(s, ds_id)
         if line_names or class_nos:
             ds.patterns = [pd for pd, _ in _jobs(ds, line_names, class_nos)]
+        if saw_on:
+            ds.line(saw_on)                                   # must exist
+            ds.patterns = [dataclasses.replace(pd, line_name=saw_on) for pd in ds.patterns]
         total = sum(len(logs) for _, logs in _jobs(ds, None, None))
         run = m.Run(dataset_id=ds_id, name=name, status="queued", total=total, snapshot=snapshot.dumps(ds))
         s.add(run)
@@ -89,7 +95,8 @@ def execute(db: Database, run_id: int) -> None:
                         run_pattern_id=rp.id, log_no=log.no, board_type=b.board_type, board_no=b.board_no,
                         thickness=b.thickness, width=b.width, length_m=b.length_m, left=b.left, right=b.right,
                         bottom=b.bottom, top=b.top, front_m=b.front_m, back_m=b.back_m, resawn=b.resawn,
-                        resaw_position=b.resaw_position, edged=b.edged, grade=b.grade, dry_volume=b.dry_volume,
+                        resaw_position=b.resaw_position, edged=b.edged, piece=b.piece, core_share=b.core_share,
+                        grade=b.grade, dry_volume=b.dry_volume,
                         wet_volume=b.wet_volume, value=b.value) for b in lr.boards])
                     done += 1
                     run.progress = done
@@ -107,9 +114,16 @@ def execute(db: Database, run_id: int) -> None:
             _cancel.pop(run_id, None)
 
 
-def start(db: Database, run_id: int) -> threading.Thread:
-    _cancel[run_id] = threading.Event()
-    t = threading.Thread(target=execute, args=(db, run_id), daemon=True, name=f"run-{run_id}")
+def start(db: Database, *run_ids: int) -> threading.Thread:
+    """Saw one or more runs, one after the other, in a background thread."""
+    for rid in run_ids:
+        _cancel[rid] = threading.Event()
+
+    def work():
+        for rid in run_ids:
+            execute(db, rid)
+
+    t = threading.Thread(target=work, daemon=True, name="run-" + "-".join(map(str, run_ids)))
     t.start()
     return t
 

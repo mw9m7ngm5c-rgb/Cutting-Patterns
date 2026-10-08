@@ -6,7 +6,7 @@
     <th class="text">then</th><th>up to<span class="unit">mm</span></th></tr></thead>
   <tbody>{% for r in rows %}
     <tr><td class="text">{{ r.blade }}</td><td>{{ "%+.1f"|format(r["from"]) }}</td><td>{{ "%+.1f"|format(r.to) }}</td>
-      <td class="text">{% if r.next == "cant" %}<strong>cant {{ r.dry|int }}</strong> ({{ r.wet }} wet){% elif r.next %}{{ r.dry|int }} mm board ({{ r.wet }} wet){% else %}–{% endif %}</td>
+      <td class="text">{% if r.next == "cant" %}<strong>cant {{ r.dry|int }}</strong> ({{ r.wet }} wet){% elif r.next %}{{ r.dry|int }} mm {{ "flitch" if not card.cant else "board" }} ({{ r.wet }} wet){% else %}–{% endif %}</td>
       <td>{{ "%+.1f"|format(r.next_to) if r.next_to is not none }}</td></tr>
   {% endfor %}</tbody>
 </table>
@@ -50,11 +50,16 @@
     </div>
     <div class="card-right">
       <h3 style="margin-top:0">Primary saw</h3>
-      <p class="help">Distances across the log from the centreline, left to right, in wet sizes; each blade is {{ card.line.primary_kerf }} mm{% if card.line.primary_outside_kerf %} ({{ card.line.primary_outside_kerf }} mm on the outside blades){% endif %}.</p>
+      <p class="help">Distances across the log from the centreline, left to right, in wet sizes; each blade is {{ card.line.primary_kerf }} mm{% if card.line.primary_outside_kerf %} ({{ card.line.primary_outside_kerf }} mm on the outside blades){% endif %}.{% if not card.cant %} Live sawing: every flitch goes to the edger.{% endif %}</p>
       {{ blades(card.primary_rows) }}
+      {% if card.secondary_rows %}
       <h3>Secondary saw</h3>
-      <p class="help">Distances across the cant from its centreline, bottom to top, in wet sizes; each blade is {{ card.line.secondary_kerf }} mm{% if card.line.secondary_outside_kerf %} ({{ card.line.secondary_outside_kerf }} mm on the outside blades){% endif %}.</p>
+      <p class="help">Distances across the cant from its centreline, bottom to top, in wet sizes; each blade is {{ card.line.secondary_kerf }} mm{% if card.line.secondary_outside_kerf %} ({{ card.line.secondary_outside_kerf }} mm on the outside blades){% endif %}.
+        {% if card.line.cant_guiding %} Curve sawing: {{ store.CANT_GUIDING[card.line.cant_guiding]|lower }}.{% endif %}
+        {% if card.line.secondary_offset_mm %} Stack set {{ card.line.secondary_offset_mm }} mm high.{% endif %}
+        {% if "," in card.secondary %} The blade at the comma is set to the arris of each cant.{% endif %}</p>
       {{ blades(card.secondary_rows) }}
+      {% endif %}
       <h3>Machine settings</h3>
       <dl class="kv">
         <dt>Primary kerf</dt><dd>{{ card.line.primary_kerf }} mm{% if card.line.primary_outside_kerf %} ({{ card.line.primary_outside_kerf }} outside){% endif %}</dd>

@@ -273,7 +273,7 @@ class _Cone:
         return depth <= t.wet and depth / ad + width / aw <= 1.0 + 1e-9
 
     def _radius_needed(self, lo: float, hi: float, t: Size, w: Size) -> float:
-        key = (round(lo, 3), round(hi, 3), t.dry, w.dry)
+        key = (round(lo, 3), round(hi, 3), t.dry, w.dry, w.wet)
         if key not in self.need:
             faces = [hi] if lo >= 0 else [lo] if hi <= 0 else [lo, hi]
             half = w.wet / 2.0
@@ -309,6 +309,33 @@ class _Cone:
             vol = t.dry * w.dry * max(ok) / 1e9
             if vol > best[0] + 1e-12 or (abs(vol - best[0]) <= 1e-12 and w.dry > best[3]):
                 best = (vol, vol * self.p.price(t.dry, w.dry, max(ok)), t.dry, w.dry)
+        if self.line.edger_blades >= 3:
+            best = max(best, self._best_pair(lo, hi, t, cant, r0), key=lambda b: b[0])
+        return best
+
+    def _best_pair(self, lo: float, hi: float, t: Size, cant: Size | None, r0: float):
+        """Three-blade edger: two boards side by side, one kerf apart, checked as one wider piece with the
+        first board's wane allowance (an approximation of the engine's search, A-58)."""
+        k = self.line.edger_kerf
+        widths = [w for w in self.p.valid_widths(t.dry)
+                  if (t.dry, w.dry) not in self.p.centre_boards and (cant is None or w.wet < cant.wet - 1e-6)]
+        sbw = self.line.second_board_width.strip().lower()
+        seconds = widths if sbw in ("", "best") else [w for w in widths if f"{w.dry:g}" == sbw]
+        best = (0.0, 0.0, 0.0, 0.0)
+        for w1 in widths:
+            for w2 in seconds:
+                pair = Size(w1.dry, w1.wet + k + w2.wet)
+                if cant is not None and pair.wet > cant.wet + 1e-6:
+                    continue
+                clear = self._clear_length(self._radius_needed(lo, hi, t, pair), r0)
+                l1 = [x for x in self.lengths[t.dry][w1.dry] if x <= clear + 1e-6]
+                l2 = [x for x in self.lengths[t.dry][w2.dry] if x <= clear + 1e-6]
+                if not (l1 and l2):
+                    continue
+                v1, v2 = t.dry * w1.dry * max(l1) / 1e9, t.dry * w2.dry * max(l2) / 1e9
+                if v1 + v2 > best[0] + 1e-12:
+                    best = (v1 + v2, v1 * self.p.price(t.dry, w1.dry, max(l1)) + v2 * self.p.price(t.dry, w2.dry, max(l2)),
+                            t.dry, w1.dry)
         return best
 
     def board(self, kind: str, lo: float, hi: float, t: Size, cant: Size | None, r0: float):
@@ -451,7 +478,7 @@ def _rank(cand: Candidate, ps: float, res: PatternResult, objective: Objective, 
 
 def generate(logs: list[Log], products: Products, line: ProductionLine, settings: Settings, log_price: float,
              objective: Objective = Objective.VOLUME, constraints: Constraints = Constraints(),
-             simulate: int = 80, top: int = 10, sample_logs: int = 12,
+             simulate: int = 120, top: int = 10, sample_logs: int = 12,
              progress: Callable[[str, int, int], None] | None = None,
              cancelled: Callable[[], bool] | None = None,
              map_fn: Callable = map) -> GeneratorResult:

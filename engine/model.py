@@ -87,6 +87,13 @@ class Products:
     board_grades: list[str] = field(default_factory=lambda: ["All board grades"])
     wane: dict[tuple[float, float], WaneRule] = field(default_factory=dict)
     centre_boards: set[tuple[float, float]] = field(default_factory=set)
+    # (thickness, width, log grade, board grade) -> % chance of that board grade when the board's
+    # cross-section is 0 %, 1-50 %, 51-99 % and 100 % defect core
+    grade_outputs: dict[tuple[float, float, str, str], tuple[float, float, float, float]] = field(default_factory=dict)
+
+    @property
+    def grades_in_use(self) -> bool:
+        return len(self.board_grades) > 1
 
     def thickness(self, dry: float) -> Size:
         for s in self.thicknesses:
@@ -231,6 +238,27 @@ class Settings:
     chip_price: float = 0.0       # R/m3
     sawdust_price: float = 0.0    # R/m3
     pct_fines: float = 0.0
+    arris_small_end: bool = True  # arris alignment judged on the small-end cross-section only
+    variation: "Variation | None" = None   # real-log variation; None = ideal logs
+
+
+@dataclass(frozen=True)
+class Variation:
+    """Departures from the ideal log, drawn per log from the run's seed (ASSUMPTIONS A-55).
+
+    diameter_pct: out-of-roundness, standard deviation of the radius around a disc (% of radius)
+    taper_pct:    irregular taper, standard deviation of the diameter along the log (% of diameter)
+    sweep_mm:     crook, standard deviation of the centreline's wander off its ideal curve (mm)
+    ovality_pct:  standard deviation of each disc's ovality (% of the ovality)
+    """
+    diameter_pct: float = 0.0
+    taper_pct: float = 0.0
+    sweep_mm: float = 0.0
+    ovality_pct: float = 0.0
+
+    @property
+    def active(self) -> bool:
+        return any(v > 0 for v in (self.diameter_pct, self.taper_pct, self.sweep_mm, self.ovality_pct))
 
 
 @dataclass(frozen=True)
@@ -266,6 +294,8 @@ class Board:
     dry_volume: float = 0.0  # m3
     wet_volume: float = 0.0
     value: float = 0.0       # R
+    piece: int = 0           # 0 = the flitch's main board; 1, 2 ... = second edger board or a further cross-cut board
+    core_share: float = 0.0  # share of the board's cross-section in the defect core (0-1)
 
     @property
     def label(self) -> str:
@@ -279,6 +309,7 @@ class LogResult:
     log_volume: float        # m3, nominal or actual according to Settings
     sawdust_volume: float
     chip_volume: float
+    secondary_shift: object = None   # per disc: how far the secondary cuts sit above the log datum (mm)
 
     @property
     def dry_board_volume(self) -> float:

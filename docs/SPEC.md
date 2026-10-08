@@ -1,6 +1,6 @@
 # Sawing pattern simulator and generator: specification
 
-Status: Phase 3 (pattern generator) complete; awaiting sign-off before Phase 4. Results: Phase 1 section 13, Phase 2 section 14, Phase 3 section 15.
+Status: Phase 4 (advanced sawing) complete; all four phases built. Results: Phase 1 section 13, Phase 2 section 14, Phase 3 section 15, Phase 4 section 16.
 Companion document: `ASSUMPTIONS.md` (every rule here that was inferred rather than read is listed there with its evidence).
 
 ## 1. Purpose
@@ -103,18 +103,22 @@ Confirmed against the stored board coordinates.
 
 ### 4.3 Primary breakdown
 
-1. Apply log rotation about the z axis, log misalignment (x shift growing linearly from small end to large end) and primary saw offset (constant x shift). All zero in the reference run; Phase 4 for non-zero values.
+1. Apply log rotation about the z axis (from horns up; the discs become polygons), log misalignment (an x shift growing linearly along the log, the middle of the log on the saw line, A-53) and primary saw offset (constant x shift). All zero in the reference run.
 2. Cant: x from −W/2 to +W/2, W the **wet** cant width.
 3. Sideboards step outward on each side: kerf, then wet thickness, repeated. A final kerf separates the last sideboard from the slab.
 4. Kerf is the inside-blade kerf except for the outermost n blades per side when two kerf sizes are set.
-5. Live sawing (no cant in the primary string): every piece is a flitch and goes to the edger. Phase 4.
+5. Live sawing (no cant in the primary string): the whole stack is centred on x = 0, every piece is a flitch (board type 3) and goes to the edger. No secondary pattern.
+6. Chipper-profiler lines: a sideboard or cant board written `TxW` is profiled to width W on the log's centreline and never edged; only its length is chosen. Fixed widths need a chipper-profiler line.
 
 ### 4.4 Secondary breakdown
 
 1. The cant is turned on its side. In log coordinates the cuts are horizontal planes (constant y).
-2. Stack height = Σ wet thicknesses + kerf × (boards − 1), centred on y = 0 after applying secondary saw offset and cant misalignment.
-3. Cant guiding: none (straight cuts, as in the reference run), half taper (cuts follow the centreline arc) or full taper (cuts follow the inside curve), each limited by maximum sweep: sweep beyond the limit is left over and sawn straight. Phase 4.
-4. Arris alignment (comma in the string): the stack is shifted so that the marked blade gives the first full-length bark-free board on that side. A setting chooses whether this is judged on the small-end section only. Phase 4.
+2. Stack height = Σ wet thicknesses + kerf × (boards − 1), centred on y = 0.
+3. Everything that moves or bends the secondary cuts is one shift of the cant frame per disc (`secondary_shift`), so edging and the wane test work the same on curved boards. Board positions are reported in this cant frame.
+   - Secondary saw offset: constant shift up.
+   - Cant misalignment: shift growing linearly along the log, the middle on the saw line (A-53).
+   - Cant guiding (curve sawing): half taper follows the curve of the log's centreline; full taper follows the top face of the cant (centreline plus the growth in radius, centred at mid-length), so the taper falls on one side. Either follows at most `max_sweep` (mm/m) × length of the sweep; the rest is sawn straight (A-54).
+   - Arris alignment (comma in the string): the stack moves so the blade at the comma sits on the arris, the height where the cant's sawn faces run out of wood; top arris if the blade is in the upper half of the stack, else the bottom one. Judged on the small end only or along the whole log (setting) (A-57).
 
 ### 4.5 Which boards are edged
 
@@ -130,8 +134,8 @@ For a flitch of fixed wet thickness:
 1. Candidate products: valid combinations with that thickness, excluding centre-board-only sizes, and for cant flitches not wider than the cant.
 2. For each candidate width, find the placement across the flitch and the z-range over which the board passes the wane test. Length = z-range floored to the length increment, and must reach the minimum length.
 3. Pick by edging objective (volume in the reference run; length is the other documented choice).
-4. Cross-cut option: if "max boards per flitch" allows, split the flitch along z and edge each part separately when that raises the objective.
-5. Three-blade edger: after the first board is chosen, try a second board from the remaining offcut at the fixed second width (or the best valid width when set to "Best").
+4. Cross-cut option: if "max boards per flitch" is 2 or more, edge further boards from the length the first board left, longest first, until the limit or no board fits (A-59).
+5. Three-blade edger: the first board is pushed to one end of its room and a second board, of the fixed second width or any valid width ("Best"), is placed exactly one edger kerf beside it. The pair is kept only if it beats the single board; full-width cant boards and boards inside the riving knives are never split (A-58).
 6. Resaw: when no valid board can be made at the flitch's thickness, try each thinner valid thickness. The resawn board keeps the inner sawn face; the resaw cut sits one wet thickness out from it, and the resaw kerf is charged to sawdust. Confirmed positions in the run: a 25 mm flitch at y 74 to 101 became a 19 mm board with the resaw cut at y = 95.
 
 Wane test (fitted to the reference run, ASSUMPTIONS A-07). At each corner of the board's cross-section, at every disc along the board:
@@ -142,7 +146,11 @@ where allowed depth = `thickness_wane %` of the dry thickness and allowed width 
 
 ### 4.7 Grades
 
-If more than one board grade exists, each board's grade is drawn from the probability table for its thickness × width and log grade, using the share of the board cross-section that lies inside the defect core (four bands: 0 %, 1 to 50 %, 51 to 99 %, 100 %). The draw uses the run's seeded generator. The reference run has one grade, so this is Phase 4.
+If more than one board grade exists, each board's grade is drawn from the probability table for its thickness × width and log grade, using the share of the board's sawn cross-section inside the defect core, averaged along the board (four bands: 0 %, 1 to 50 %, 51 to 99 %, 100 %). The draw uses a generator seeded from the run's seed and the log number. The board is priced at its grade's combination (R0 if that grade is not a valid product) (A-60).
+
+### 4.7b Real logs
+
+With real-log variation on, every log is built as irregular polygons: smooth random irregular taper, out-of-roundness (2 to 5 lobes per round, drifting along the log), uneven ovality and crook, drawn from the seed and the log number so a log always has the same shape. The saw datum still runs through the end centres (A-55, A-56).
 
 ### 4.8 Volumes and values
 
@@ -204,7 +212,7 @@ Additions beyond Simsaw: `saw_pattern.source` (manual / imported / generated), `
 1. **Enumerate.** Every allowed cant width; 0 to N sideboards a side; every secondary stack of usable thicknesses (a thickness with at least one valid product) whose wet height plus kerfs fits the largest log in the class at its large end. With "fill the face" (always on) a stack is dropped if another of the thinnest boards would still fit on each side of it at the small end of the smallest log.
 2. **Constrain while enumerating.** Symmetric only (default on: same sideboards both sides, secondary reads the same both ways); thicker boards towards the centre (default on); most sideboards a side (2); most blades on each saw; most different thicknesses (3); cant widths to try; products the pattern must yield (their thickness must appear); products never to cut (switched off for the search). The class searches for Ngomi build 2 000 to 13 000 candidates.
 3. **Pre-screen** every candidate on straight, round, tapered logs at the smallest, median and largest small-end diameter of the class, with the median length and taper. Closed form: for each flitch and width the smallest log radius at which the board passes the wane test is found once; the clear length then runs from there to the large end. It follows the engine's rules for widths, centre boards, valid lengths and resaw. It discards clear losers; near the top its order is rough (ASSUMPTIONS A-46).
-4. **Simulate** the best 80 with the full engine on a stratified sample of 12 logs of the class, then the best 10 on every log. A minimum share of the target product and "must yield" are checked on these real results.
+4. **Simulate** the best 120 (80 before Phase 4) with the full engine on a stratified sample of 12 logs of the class, then the best 10 on every log. A minimum share of the target product and "must yield" are checked on these real results.
 5. **Rank** by dry volume recovery, nett value recovery or volume of a target product, less a token 0.01 points per saw blade so a blade that changes nothing never wins a tie. Show the top 10 with recovery, nett value, boards per log, average length, product mix, blades and a diagram of the class's middle log.
 6. **Diameter chart.** The same search at each 1 cm step of a diameter range, on three ideal logs per step with the dataset's median taper, sweep, ovality and length. Then the best three patterns of every step are sawn at every other step, so each step scores every pattern that could carry a class across it.
 7. **Suggest classes** from the chart, two ways: a set number of classes (exact: the split and patterns with the highest total score), or neighbouring steps grouped while one pattern stays within a tolerance of each step's best. Both show what each class gives up against the best pattern at every centimetre. "Use these as the log classes" replaces the classes and saves each class's pattern.
@@ -294,9 +302,9 @@ Speed: 50 logs on one pattern in about 0.4 s (target 2 s).
 - Volumes, values, mass balance, recoveries, product mix.
 - Simsaw import from `.mdb` or JSON fixtures: current inputs or a batch run's snapshot with Simsaw's results.
 
-### 13.3 What it refuses for now
+### 13.3 What it refused (until Phase 4)
 
-A dataset that asks for any Phase 4 feature (curve sawing, arris alignment, rotation, misalignment, offsets, live sawing, chipper-profiler sideboards) stops with a message naming the feature. It is never silently ignored.
+A dataset that asked for a Phase 4 feature stopped with a message naming it. Since Phase 4 all of them are built (section 16).
 
 ### 13.4 Command line
 
@@ -387,3 +395,51 @@ The chart's bars zigzag between odd and even centimetres. That is the "odd numbe
 - Process pool on macOS and Windows: written for both (worker processes are started with "spawn", the default on those systems), run on Linux only.
 - Ranking for nett value and for a target product is tested on small cases; the timings above are for dry volume recovery.
 - The generator searches cant sawing only. Live sawing and chipper-profiler patterns arrive with Phase 4, as do curve sawing and real-log variation.
+
+## 16. Phase 4 results
+
+Curve sawing, rotation, misalignment and offsets, arris alignment, three-blade edger, cross-cutting into several boards, grades from the defect core, real-log variation, live sawing, chipper-profiler lines and scenario comparison. 231 tests pass (22 new; the Phase 1 tests that checked these features were refused now check that they work).
+
+### 16.1 Against Simsaw
+
+Unchanged: 54.10 / 52.37 / 56.23 % dry recovery against Simsaw's 54.00 / 52.29 / 56.23 %, identical board counts and board positions. Every new feature is a no-op at its default. The Ngomi line's three-blade edger ("Best") is now simulated and, like Simsaw in Test1, finds no second board in classes 1 and 2.
+
+### 16.2 What changed for classes 3 to 5
+
+In the larger classes, which Test1 does not cover, the three-blade edger does find second boards on wide sideboards: in class 4 (30–35.9 cm) 38 of the 248 edged flitches (on the generator's best pattern) give two boards. The generator's best results move accordingly (dry recovery, same logs, 4 cores):
+
+| Class | Phase 3 best | Phase 4 best | Time |
+| --- | --- | --- | --- |
+| 1 | 54.14 % | 54.14 % `50/114/50` `2*19 3*38 2*19` | 9 s |
+| 2 | 56.86 % | 56.86 % `2*19/152/2*19` `2*19 25 2*50 25 2*19` | 12 s |
+| 3 | 59.29 % | 59.29 % `19 25/152/25 19` `2*19 25 3*50 25 2*19` | 13 s |
+| 4 | 58.87 % | 61.05 % `2*38/152/2*38` `2*19 38 3*50 38 2*19` | 16 s |
+| 5 | 55.17 % | 61.30 % `2*38/152/2*38` `2*19 38 4*50 38 2*19` | 18 s |
+
+The generator's pre-screen now counts second boards too, and it simulates 120 candidates instead of 80 (A-46).
+
+### 16.3 Examples
+
+- Curve sawing on the Ngomi patterns (Line 1 against a copy with half-taper cant guiding, all three patterns): +1.55 recovery points overall (+0.9 to +2.2 per pattern) and +R62/m³ nett. On an extreme swept log (26 cm, 4.8 m, 120 mm sweep) half taper raises recovery from 23.5 % to 40.1 %.
+- Three-blade edger on a 40 cm log with 50 mm sideboards: two 50 × 152 boards per sideboard instead of one, recovery 13.4 % → 24.1 % on that pattern.
+
+### 16.4 Speed
+
+A class of 44–48 logs on one pattern: 1.0–1.3 s for ideal logs, 1.5 s with curve sawing, 1.9 s with real-log variation or log rotation (polygons with 64 points per disc). The generator: 9–18 s per class on 4 cores.
+
+### 16.5 Screens
+
+| Screen | Change |
+| --- | --- |
+| Machines | Every setting is live. "Copy as a scenario" copies a line's settings without its patterns. |
+| Settings | Arris judged on the small end or the whole log; real-log variation on or off with four sizes. |
+| Sawing patterns | Live and chipper-profiler patterns; boards show grade, core share, second boards and profiled boards; a note says where the secondary cuts sit when they are shifted or curved. |
+| Batch runs | Saw on another line's machine settings; "Compare two machine settings" runs the same patterns on two lines and opens the comparison. |
+| Compare | Any two runs (including Simsaw's imported run) side by side per pattern, with the differences and the machine settings that differ. |
+| Reports | Board report and Excel by grade when grades are in use; link to Compare. |
+| Generator | Option to search on logs with real-log variation. |
+| Saw setting card | Live sawing; notes for curve sawing, secondary offset and arris alignment. |
+
+### 16.6 Not checked against Simsaw
+
+No Simsaw run uses any Phase 4 feature, so each is tested against hand-worked cases only (`tests/test_phase4.py`). The rules that had to be chosen are A-53 to A-60. A Simsaw run of the course's Problem 3 scenarios would turn them into checked rules.

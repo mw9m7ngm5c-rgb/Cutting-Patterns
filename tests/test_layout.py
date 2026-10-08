@@ -80,14 +80,17 @@ def test_unknown_size_is_reported(products, line):
         lay("25/200/25", "3*38", products, line)
 
 
-@pytest.mark.parametrize("primary,secondary,kw", [
-    ("3*25 2*38 3*25", "", {}),                                   # live sawing
-    ("25/114/25", "25 3*38,25", {}),                              # arris alignment
-    ("25x76/114/25x76", "3*38", {}),                              # chipper-profiler sideboards
-    ("25/114/25", "3*38", {"cant_guiding": CantGuiding.HALF_TAPER}),
-    ("25/114/25", "3*38", {"secondary_offset_mm": 10}),
-    ("25/114/25", "3*38", {"cant_misalignment_mm": 10}),
-])
-def test_phase_4_features_are_refused_not_ignored(products, primary, secondary, kw):
-    with pytest.raises(NotImplementedError):
-        lay(primary, secondary, products, ProductionLine(**kw))
+def test_live_sawing_lays_the_whole_stack_across_the_log(products, line):
+    lo = lay("2*25 38 2*25", "", products, line)
+    assert lo.live and lo.cant is None and not lo.secondary_kerfs
+    assert [f.kind for f in lo.flitches] == ["live"] * 5
+    # 2 x 27 + 41 + 2 x 27 wet and four 3 mm kerfs = 161 mm, centred
+    assert lo.flitches[0].lo == pytest.approx(-80.5) and lo.flitches[-1].hi == pytest.approx(80.5)
+    assert len(lo.primary_kerfs) == 6
+
+
+def test_fixed_widths_and_arris_marker_reach_the_layout(products, line):
+    lo = lay("25x76/114/25x76", "25 3*38,25", products, line)
+    sides = [f for f in lo.flitches if not f.on_cant]
+    assert all(f.fixed_width is not None and f.fixed_width.dry == 76 for f in sides)
+    assert lo.arris_after == 3

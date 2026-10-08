@@ -17,7 +17,7 @@ from . import snapshot
 # ------------------------------------------------------------------ labels used across the app
 
 SAW_TYPES = {0: "Cant / live sawing", 1: "Cant / live sawing, grouped", 2: "Chipper-profiler", 3: "Chipper-profiler, grouped"}
-CANT_GUIDING = {0: "None (straight cuts)", 1: "Half taper", 2: "Full taper"}
+CANT_GUIDING = {0: "None (straight cuts)", 1: "Half taper (follow the centreline)", 2: "Full taper (follow the top face)"}
 EDGING_OBJECTIVES = {0: "Maximum volume", 1: "Maximum length", 2: "Maximum value"}
 NOMINAL_DIAMETER = {0: "Odd number (18.0-19.9 → 19)", 1: "Even number (19.0-20.9 → 20)", 2: "Whole number (18.5-19.4 → 19)"}
 DISTRIBUTIONS = {0: "Uniform", 2: "Normal, 95 % within limits", 1: "Normal, 65 % within limits"}
@@ -45,11 +45,16 @@ def engine_products(s: Session, ds_id: int) -> em.Products:
             for r in s.scalars(select(m.WaneRule).where(m.WaneRule.dataset_id == ds_id))}
     centre = {(th[r.thickness_id].dry, wd[r.width_id].dry)
               for r in s.scalars(select(m.CentreBoard).where(m.CentreBoard.dataset_id == ds_id))}
+    lg = _grade_names(s, m.LogGrade, ds_id)
+    outputs = {(th[r.thickness_id].dry, wd[r.width_id].dry, lg[r.log_grade_id], bg[r.board_grade_id]):
+               (r.p_zero, r.p_fifty, r.p_ninety_nine, r.p_hundred)
+               for r in s.scalars(select(m.GradeOutput).where(m.GradeOutput.dataset_id == ds_id))
+               if r.log_grade_id in lg and r.board_grade_id in bg}
     return em.Products(
         sorted((em.Size(t.dry, t.wet) for t in th.values()), key=lambda z: z.dry),
         sorted((em.Size(w.dry, w.wet) for w in wd.values()), key=lambda z: z.dry),
         [em.LengthClass(c.name, c.min_m, c.max_m, c.incr_m) for c in sorted(lc.values(), key=lambda c: c.min_m)],
-        combos, list(bg.values()) or ["All board grades"], wane, centre)
+        combos, list(bg.values()) or ["All board grades"], wane, centre, outputs)
 
 
 def engine_line(ln: m.ProductionLine) -> em.ProductionLine:
@@ -80,7 +85,9 @@ def engine_settings(st: m.DatasetSettings) -> em.Settings:
     return em.Settings(st.use_nominal_diameter, em.NominalDiameter(st.nominal_diameter), st.use_nominal_length,
                        st.nominal_length_incr_m, st.use_nominal_taper, st.nominal_taper_mm_per_m,
                        st.disc_separation_cm, st.points_per_disc, st.discretised, st.seed,
-                       st.chip_price, st.sawdust_price, st.pct_fines)
+                       st.chip_price, st.sawdust_price, st.pct_fines, bool(st.arris_small_end),
+                       em.Variation(st.diameter_variation, st.taper_variation, st.sweep_variation,
+                                    st.ovality_variation) if st.real_logs else None)
 
 
 def engine_dataset(s: Session, ds_id: int) -> simsaw.Dataset:
@@ -331,7 +338,14 @@ def import_simsaw(s: Session, path, name: str | None = None, include_runs: bool 
                             nominal_length_incr_m=st.nominal_length_incr_m, use_nominal_taper=st.use_nominal_taper,
                             nominal_taper_mm_per_m=st.nominal_taper_mm_per_m, disc_separation_cm=st.disc_separation_cm,
                             points_per_disc=st.points_per_disc, discretised=st.discretised, seed=st.seed,
-                            chip_price=st.chip_price, sawdust_price=st.sawdust_price, pct_fines=st.pct_fines))
+                            chip_price=st.chip_price, sawdust_price=st.sawdust_price, pct_fines=st.pct_fines,
+                            arris_small_end=st.arris_small_end,
+                            # Simsaw keeps real-log variation with the log generator (units: A-55)
+                            real_logs=bool(gen and gen.get("real_logs")),
+                            diameter_variation=float(gen.get("diameter_variation") or 0) if gen else 0.0,
+                            taper_variation=float(gen.get("taper_variation") or 0) if gen else 0.0,
+                            sweep_variation=float(gen.get("sweep_variation") or 0) if gen else 0.0,
+                            ovality_variation=float(gen.get("ovality_variation") or 0) if gen else 0.0))
     s.flush()
     sync_products(s, i)
 

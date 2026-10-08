@@ -123,8 +123,14 @@ def test_each_nominal_option_can_be_switched_off():
     assert log_volume_m3(log, only_d) == pytest.approx(math.pi / 4 * (0.21 + 0.5 * 2.75 * 0.008) ** 2 * 2.75)
 
 
-def test_rotation_and_offsets_are_refused_until_phase_4():
-    with pytest.raises(NotImplementedError):
-        build_sections(Log(1, 20.0, 3.0), S5, ProductionLine(log_rotation_deg=15))
-    with pytest.raises(NotImplementedError):
-        build_sections(Log(1, 20.0, 3.0), S5, ProductionLine(primary_offset_mm=10))
+def test_rotation_turns_the_sweep_and_offsets_move_the_log():
+    log = Log(1, 30.0, 3.0, 10.0, sweep_mm=40.0)
+    plain = build_sections(log, S5)
+    turned = build_sections(log, S5, ProductionLine(log_rotation_deg=90))
+    _, cy = plain.centres()
+    cx_t, cy_t = turned.centres()
+    assert np.allclose(cy_t, 0, atol=1e-6) and np.allclose(np.abs(cx_t), np.abs(cy), atol=1e-6)
+    assert turned.areas() == pytest.approx(plain.to_polygons(S5.points_per_disc).areas(), rel=1e-9)
+    moved = build_sections(log, S5, ProductionLine(primary_offset_mm=12, log_misalignment_mm=20))
+    cx_m, _ = moved.centres()
+    assert cx_m[0] == pytest.approx(12 - 10) and cx_m[-1] == pytest.approx(12 + 10)

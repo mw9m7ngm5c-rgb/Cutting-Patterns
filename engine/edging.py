@@ -139,14 +139,16 @@ def _score(objective: EdgingObjective, thickness: Size, width: Size, length_mm: 
 
 def best_board(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickness: Size,
                widths: list[Size], products: Products, objective: EdgingObjective, rules: Rules,
-               ) -> Choice | None:
+               fixed_u0: float | None = None, cache: dict | None = None) -> Choice | None:
     """Best board of the given thickness with faces at v_lo and v_hi, over the candidate widths.
 
     For each width: find the longest clear span, cross-cut it down to the longest allowed length, and
     score it by the edging objective. Returns None when no width gives a board of the minimum length.
+    fixed_u0 pins the board's first edge (a chipper-profiler cuts the width, not the edger).
+    cache: share the depth ladders between calls on the same chord (the caller guarantees that).
     """
     best: Choice | None = None
-    ladders: dict[float, tuple[Ladder, Ladder]] = {}
+    ladders: dict = cache if cache is not None else {}
     full_span = int(z_mm[-1] - z_mm[0])
     # the longest board any candidate could give from this log
     cap = max((x for w_ in widths for x in products.allowed_lengths_mm(thickness.dry, w_.dry) if x <= full_span),
@@ -163,7 +165,7 @@ def best_board(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickne
         if rule.length_wane <= 0 or depth <= _EPS or allow <= _EPS:
             depth = allow = 0.0                    # no wane at all
         depth = min(depth, (v_hi - v_lo) / 2.0)
-        key = round(depth, 6)
+        key = (round(depth, 6), round(v_lo, 6), round(v_hi, 6))
         if key not in ladders:
             ladders[key] = (depth_ladder(chord, v_lo, +1.0, depth, rules.wane_ladder),
                             depth_ladder(chord, v_hi, -1.0, depth, rules.wane_ladder))
@@ -171,7 +173,11 @@ def best_board(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickne
         w = width.wet
         lo1, hi1 = face_interval(lo_face, w, allow)
         lo2, hi2 = face_interval(hi_face, w, allow)
-        run = longest_run(np.maximum(lo1, lo2), np.minimum(hi1, hi2), z_mm)
+        lo_all, hi_all = np.maximum(lo1, lo2), np.minimum(hi1, hi2)
+        if fixed_u0 is not None:
+            ok = (lo_all <= fixed_u0 + _EPS) & (fixed_u0 <= hi_all + _EPS)
+            lo_all, hi_all = np.where(ok, fixed_u0, np.inf), np.where(ok, fixed_u0, -np.inf)
+        run = longest_run(lo_all, hi_all, z_mm)
         if run is None:
             continue
         first, last, c_lo, c_hi = run

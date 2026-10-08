@@ -14,6 +14,8 @@
     <label class="field">Log length <span class="unit">m, for diameters without logs (blank = median, {{ "%.1f"|format(length) }} m)</span><input name="length_m" inputmode="decimal"></label>
     <label class="check"><input type="checkbox" name="symmetric" checked> Symmetric patterns only</label>
     <label class="check"><input type="checkbox" name="thicker_to_centre" checked> Thicker boards towards the centre</label>
+    <label class="check"><input type="checkbox" name="real_logs" {{ "checked" if st.real_logs else "disabled" }}>
+      Saw on logs with real-log variation{% if not st.real_logs %} <span class="help">(switch it on under Settings)</span>{% endif %}</label>
   </div>
   <div class="row" style="margin-top:.8rem">
     <fieldset class="grow"><legend>Cant widths to try</legend>
@@ -37,7 +39,7 @@
 {% elif tab == "class" %}
 <form class="panel" method="post" action="/d/{{ ds.id }}/generator">
   <input type="hidden" name="kind" value="class">
-  <p class="help">Builds every cant-sawing pattern the options allow, checks them quickly on straight tapered logs, saws the best 80
+  <p class="help">Builds every cant-sawing pattern the options allow, checks them quickly on straight tapered logs, saws the best 120
     on a sample of the class's logs and the best ten on every log. Usually under a minute.</p>
   <div class="form-grid">
     <label class="field">Production line
@@ -47,7 +49,7 @@
       <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm ({{ counts.get(c.no, 0) }} logs)</option>{% endfor %}</select></label>
     <label class="check"><input type="radio" name="mode" value="diameter"> One diameter</label>
     <label class="field">Small-end diameter <span class="unit">cm; three ideal logs across the 1 cm step</span><input name="diameter_cm" value="{{ span[0] }}" inputmode="decimal"></label>
-    <label class="field">Candidates to saw on the sample<input name="simulate" value="80" inputmode="numeric"></label>
+    <label class="field">Candidates to saw on the sample<input name="simulate" value="120" inputmode="numeric"></label>
   </div>
   {{ options("class") }}
   <p><button type="submit">Find the best patterns</button></p>

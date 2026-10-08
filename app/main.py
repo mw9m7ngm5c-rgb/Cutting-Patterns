@@ -1,6 +1,7 @@
 """Web app: FastAPI routes, server-rendered pages, small JSON API for the grids and the pattern screen."""
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import pathlib
@@ -15,6 +16,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
+from sqlalchemy import inspect as sqlalchemy_inspect
 
 from engine import generator as G
 from engine import loggen
@@ -305,6 +307,22 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             s.commit()
         return go(f"/d/{ds_id}/machines", line=line_id, tab=tab, msg="Saved.")
 
+    @app.post("/d/{ds_id}/machines/{line_id}/duplicate")
+    def duplicate_line(ds_id: int, line_id: int):
+        """A copy of the line's settings (not its patterns): the starting point for a scenario."""
+        with db.session() as s:
+            ln = s.get(m.ProductionLine, line_id)
+            if ln is None or ln.dataset_id != ds_id:
+                raise HTTPException(404)
+            data = {c.key: getattr(ln, c.key) for c in sqlalchemy_inspect(m.ProductionLine).column_attrs if c.key != "id"}
+            data["no"] = (s.scalar(select(func.max(m.ProductionLine.no)).where(m.ProductionLine.dataset_id == ds_id)) or 0) + 1
+            data["name"] = f"{ln.name} (scenario)"
+            new = m.ProductionLine(**data)
+            s.add(new)
+            s.commit()
+            return go(f"/d/{ds_id}/machines", line=new.id, tab="general",
+                      msg="Copied. Change what you want to test, then compare it on the Batch runs page.")
+
     @app.post("/d/{ds_id}/machines/{line_id}/delete")
     def delete_line(ds_id: int, line_id: int):
         with db.session() as s:
@@ -314,7 +332,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                 s.commit()
         return RedirectResponse(f"/d/{ds_id}/machines", 303)
 
-    SETTING_BOOLS = ("use_nominal_diameter", "use_nominal_length", "use_nominal_taper", "discretised")
+    SETTING_BOOLS = ("use_nominal_diameter", "use_nominal_length", "use_nominal_taper", "discretised",
+                     "arris_small_end", "real_logs")
 
     @app.get("/d/{ds_id}/settings", response_class=HTMLResponse)
     def settings_page(request: Request, ds_id: int, msg: str = ""):
@@ -337,6 +356,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                 st.disc_separation_cm = float(form["disc_separation_cm"])
                 st.points_per_disc = int(form["points_per_disc"])
                 st.seed = int(form["seed"])
+                for f in ("diameter_variation", "taper_variation", "sweep_variation", "ovality_variation"):
+                    setattr(st, f, max(0.0, float(str(form.get(f) or 0).replace(",", "."))))
             except (KeyError, ValueError):
                 return go(f"/d/{ds_id}/settings", msg="Every field needs a number.")
             if st.disc_separation_cm <= 0 or st.points_per_disc < 8:
@@ -474,7 +495,10 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             class_nos = [c.no for c in s.scalars(select(m.LogClass).where(
                 m.LogClass.id.in_([int(v) for v in form.getlist("class_id")])))]
         name = str(form.get("name") or "").strip() or f"Run {dt.datetime.now():%Y-%m-%d %H:%M}"
-        rid = runs.create_run(db, ds_id, name, line_names or None, class_nos or None)
+        with db.session() as s:
+            other = s.get(m.ProductionLine, int(form["saw_on"])) if form.get("saw_on") else None
+            saw_on = other.name if other is not None and other.dataset_id == ds_id else None
+        rid = runs.create_run(db, ds_id, name, line_names or None, class_nos or None, saw_on)
         if run_in_thread:
             runs.start(db, rid)
         else:
@@ -502,6 +526,58 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                 s.delete(r)
                 s.commit()
         return RedirectResponse(f"/d/{ds_id}/runs", 303)
+
+    @app.post("/d/{ds_id}/runs/compare")
+    async def start_comparison(request: Request, ds_id: int):
+        """Saw one line's patterns on two machine settings and compare (a scenario)."""
+        form = await request.form()
+        with db.session() as s:
+            dataset_or_404(s, ds_id)
+            get = lambda k: s.get(m.ProductionLine, int(form[k])) if form.get(k) else None
+            pats, a, b = get("patterns_line_id"), get("machine_a"), get("machine_b")
+            if not (pats and a and b) or {pats.dataset_id, a.dataset_id, b.dataset_id} != {ds_id}:
+                return go(f"/d/{ds_id}/runs", msg="Choose the patterns' line and the two machine settings.")
+            class_nos = [c.no for c in s.scalars(select(m.LogClass).where(
+                m.LogClass.id.in_([int(v) for v in form.getlist("class_id")])))]
+            names = (pats.name, a.name, b.name)
+        stamp = f"{dt.datetime.now():%Y-%m-%d %H:%M}"
+        ra = runs.create_run(db, ds_id, f"{names[0]} patterns on {names[1]} ({stamp})", [names[0]], class_nos or None, names[1])
+        rb = runs.create_run(db, ds_id, f"{names[0]} patterns on {names[2]} ({stamp})", [names[0]], class_nos or None, names[2])
+        if run_in_thread:
+            runs.start(db, ra, rb)
+        else:
+            runs.execute(db, ra)
+            runs.execute(db, rb)
+        return go(f"/d/{ds_id}/compare", a=ra, b=rb)
+
+    @app.get("/d/{ds_id}/compare", response_class=HTMLResponse)
+    def compare_page(request: Request, ds_id: int, a: int | None = None, b: int | None = None):
+        with db.session() as s:
+            c = ctx(s, ds_id, "reports")
+            all_runs = s.scalars(select(m.Run).where(m.Run.dataset_id == ds_id)
+                                 .order_by(m.Run.created_at.desc(), m.Run.id.desc())).all()
+            ra = next((r for r in all_runs if r.id == a), None)
+            rb = next((r for r in all_runs if r.id == b), None)
+            data = {"runs": all_runs, "ra": ra, "rb": rb}
+            if ra and rb and ra.status in ("done", "cancelled") and rb.status in ("done", "cancelled"):
+                pa, pb = reports.run_patterns(s, ra.id), reports.run_patterns(s, rb.id)
+                data["rows"] = reports.compare(pa, pb)
+                data["totals"] = (reports.combined(pa) if pa else None, reports.combined(pb) if pb else None)
+                data["lines"] = (_run_lines(ra), _run_lines(rb))
+            return page(request, "compare.html", **c, **data)
+
+    def _run_lines(run: m.Run) -> list[dict]:
+        """Machine settings a run used, for showing what differs between two runs."""
+        snap = snapshot.loads(run.snapshot)
+        used = {pd.line_name for pd in snap.patterns}
+        out = []
+        for ln in snap.lines:
+            if ln.name in used:
+                d = dataclasses.asdict(ln)
+                d["saw_type"], d["cant_guiding"], d["edging_objective"] = (int(ln.saw_type), int(ln.cant_guiding),
+                                                                          int(ln.edging_objective))
+                out.append(d)
+        return out
 
     # -------------------------------------------------------------- reports
 
@@ -563,7 +639,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             seds = [g.sed_cm for g in e.logs]
             span = (int(min(seds)), int(max(seds))) if seds else (18, 40)
             lengths = sorted(g.length_m for g in e.logs)
-            return page(request, "generator.html", **c, tab=tab, lines=lines, classes=classes, jobs=jobs, msg=msg,
+            st = store.settings_for(s, ds_id)
+            return page(request, "generator.html", **c, tab=tab, lines=lines, classes=classes, jobs=jobs, msg=msg, st=st,
                         products=_products_list(e), widths=[w.dry for w in e.products.widths], span=span,
                         length=lengths[len(lengths) // 2] if lengths else 3.0,
                         counts={lc.no: len(e.logs_in_class(lc.no)) for lc in e.log_classes})
@@ -591,7 +668,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                  "exclude": [_pair(v) for v in f.getlist("exclude")],
                  "target": _pair(f["target"]) if f.get("target") else None,
                  "min_share": float(num("min_share") or 0) / 100.0,
-                 "length_m": float(num("length_m")) if num("length_m") else None}
+                 "length_m": float(num("length_m")) if num("length_m") else None,
+                 "real_logs": f.get("real_logs") == "on"}
             if kind == "class":
                 p["simulate"] = int(num("simulate") or 80)
                 if f.get("mode") == "diameter":

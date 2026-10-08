@@ -13,7 +13,28 @@
       <fieldset style="border:none; padding:0"><legend class="help">Log classes (none ticked = all)</legend>
         {% for c in classes %}<label class="check"><input type="checkbox" name="class_id" value="{{ c.id }}"> {{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm</label>{% endfor %}</fieldset>
     </div>
+    <label class="field" style="max-width: 28rem; margin-top:.6rem">Saw on the machine settings of
+      <select name="saw_on"><option value="">each pattern's own line</option>{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
     <p><button type="submit" {{ "disabled" if not n_patterns }}>Start run</button></p>
+  </form>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Compare two machine settings</h2>
+  <p class="help">Saws the same patterns twice, once on each line's settings (kerfs, curve sawing, misalignment, resaw, edger...),
+    and shows the difference pattern by pattern. To test a change, copy the line as a scenario on the Machines page and change the copy.</p>
+  <form method="post" action="/d/{{ ds.id }}/runs/compare">
+    <div class="form-grid">
+      <label class="field">Patterns of
+        <select name="patterns_line_id">{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+      <label class="field">Sawn on (A)
+        <select name="machine_a">{% for ln in lines %}<option value="{{ ln.id }}" {{ "selected" if loop.first }}>{{ ln.name }}</option>{% endfor %}</select></label>
+      <label class="field">and on (B)
+        <select name="machine_b">{% for ln in lines %}<option value="{{ ln.id }}" {{ "selected" if loop.index == 2 or lines|length == 1 }}>{{ ln.name }}</option>{% endfor %}</select></label>
+      <fieldset style="border:none; padding:0"><legend class="help">Log classes (none ticked = all)</legend>
+        {% for c in classes %}<label class="check"><input type="checkbox" name="class_id" value="{{ c.id }}"> {{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm</label>{% endfor %}</fieldset>
+    </div>
+    <p><button type="submit" {{ "disabled" if not n_patterns }}>Compare</button>
+      <a class="button secondary" href="/d/{{ ds.id }}/compare">Compare two earlier runs</a></p>
   </form>
 </div>
 <div class="panel">

@@ -2,7 +2,6 @@
 {% macro num(name, label, unit="", value=None, later=False) -%}
   <label class="field">{{ label }} {% if unit %}<span class="unit">{{ unit }}</span>{% endif %}
     <input name="{{ name }}" value="{{ cur[name] if value is none else value }}" inputmode="decimal">
-    {% if later %}<span class="later">simulated from Phase 4; keep at 0 for now</span>{% endif %}
   </label>
 {%- endmacro %}
 {% macro opt_num(name, label, unit="") -%}
@@ -13,7 +12,6 @@
 {% macro choice(name, label, options, later=False) -%}
   <label class="field">{{ label }}
     <select name="{{ name }}">{% for v, l in options.items() %}<option value="{{ v }}" {{ "selected" if cur[name] == v }}>{{ l }}</option>{% endfor %}</select>
-    {% if later %}<span class="later">only the first option is simulated before Phase 4</span>{% endif %}
   </label>
 {%- endmacro %}
 {% macro flag(name, label) -%}
@@ -56,7 +54,9 @@
         <p class="help">The machine names are labels for your records. The kerfs and settings on the other tabs drive the simulation.</p>
         <div style="margin-top:.6rem">{{ flag("kerfs_placeholder", "The kerfs on this line are placeholders, not measured values") }}</div>
       {% elif tab == "primary" %}
-        <p class="help">Vertical cuts through the log. The cant is centred on the saw and sideboards step outward, one kerf apart.</p>
+        <p class="help">Vertical cuts through the log. The cant is centred on the saw and sideboards step outward, one kerf apart.
+          Log rotation turns the log about its axis from horns up; log misalignment skews it end to end (the middle stays on the
+          saw line); the primary saw offset moves it sideways.</p>
         <div class="form-grid">
           {{ num("primary_kerf", "Kerf (inside blades)", "mm") }}
           {{ opt_num("primary_outside_kerf", "Kerf (outside blades)", "mm") }}
@@ -66,7 +66,10 @@
           {{ num("primary_offset_mm", "Primary saw offset", "mm", later=True) }}
         </div>
       {% elif tab == "secondary" %}
-        <p class="help">The cant is turned and sawn into a stack of boards, centred on the saw, one kerf apart.</p>
+        <p class="help">The cant is turned and sawn into a stack of boards, centred on the saw, one kerf apart.
+          Cant guiding saws round the sweep: <em>half taper</em> follows the log's centreline, <em>full taper</em> follows the top face
+          of the cant so the taper all falls on the other side. Sweep beyond the largest the saw can follow is sawn straight.
+          Cant misalignment skews the cant end to end; the secondary saw offset moves the whole stack up.</p>
         <div class="form-grid">
           {{ num("secondary_kerf", "Kerf (inside blades)", "mm") }}
           {{ opt_num("secondary_outside_kerf", "Kerf (outside blades)", "mm") }}
@@ -81,8 +84,8 @@
           {{ choice("edging_objective", "Edge for", store.EDGING_OBJECTIVES) }}
           {{ num("edger_blades", "Edger blades", "2 or 3") }}
           {{ num("edger_kerf", "Edger kerf", "mm") }}
-          <label class="field">Second board width (3-blade edger)<input name="second_board_width" value="{{ cur.second_board_width }}">
-            <span class="later">from Phase 4</span></label>
+          <label class="field">Second board width (3-blade edger) <span class="unit">"Best" or a dry width in mm</span>
+            <input name="second_board_width" value="{{ cur.second_board_width }}"></label>
           {{ num("max_boards_per_flitch", "Most boards per flitch on cross-cut", "0 = off", later=True) }}
         </div>
         <h3>Resaw</h3>
@@ -94,6 +97,10 @@
         </div>
       {% endif %}
       <p style="margin-top:1rem"><button type="submit">Save</button></p>
+    </form>
+    <form method="post" action="/d/{{ ds.id }}/machines/{{ cur.id }}/duplicate" class="inline-form" style="margin-bottom:.6rem">
+      <button class="secondary" type="submit">Copy as a scenario</button>
+      <span class="help">A copy of these settings without patterns, to compare against on the Batch runs page.</span>
     </form>
     {% if lines|length > 1 %}
     <form method="post" action="/d/{{ ds.id }}/machines/{{ cur.id }}/delete" onsubmit="return confirm('Delete {{ cur.name|e }} and its sawing patterns?')">
