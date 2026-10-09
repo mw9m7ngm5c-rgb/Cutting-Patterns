@@ -24,10 +24,16 @@ Import a Simsaw dataset from the Datasets page, or from the command line:
 
 The database is `data/cutting_patterns.db`; `--db other.db` or the `CP_DB` variable uses another file.
 
+To run it for the whole office on a Mac (in the background, started at login, backed up every evening),
+follow [docs/DEPLOY_MACOS.md](docs/DEPLOY_MACOS.md): in short `./deploy/macos/install.sh` then
+`./deploy/macos/start-at-login.sh --shared`.
+
+Back up the database at any time (safe while the app runs): `.venv/bin/python -m app backup`.
+
 Tests and the engine command line:
 
 ```
-.venv/bin/python -m pytest                         # 231 tests
+.venv/bin/python -m pytest                         # 232 tests
 .venv/bin/python cli.py validate --dataset tests/fixtures/ngomi_1 --run Test1
 .venv/bin/python cli.py simulate --dataset tests/fixtures/ngomi_1 --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
 ```
@@ -42,4 +48,5 @@ Tests and the engine command line:
 - `docs/SPEC.md`: rules, data model, screens, validation, results per phase.
 - `docs/ASSUMPTIONS.md`: every rule that was inferred rather than read, with its evidence.
 - `tools/`: scripts behind the evidence in ASSUMPTIONS.
+- `deploy/macos/`: install, start-at-login, update, backup and stop scripts for a Mac.
 - `reference/`: read-only Simsaw source material. Not committed.

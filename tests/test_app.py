@@ -340,3 +340,24 @@ def test_dataset_new_duplicate_delete_from_the_web(client):
     assert "Trial copy" not in client.get("/").text
     bad = client.post("/datasets/import", files={"file": ("notes.txt", b"hello")}, follow_redirects=True)
     assert "Choose a Simsaw .mdb file" in bad.text
+
+
+def test_backup_command_copies_a_live_database_and_keeps_the_newest(tmp_path):
+    import time
+
+    from app.__main__ import main
+    db_file = tmp_path / "data" / "cp.db"
+    assert main(["--db", str(db_file), "migrate"]) == 0
+    url = f"sqlite:///{db_file}"
+    db = Database(url)
+    with db.session() as s:                      # a session holding the file open, as a running app would
+        store.create_default_dataset(s, "Live")
+        s.commit()
+        for _ in range(3):
+            assert main(["--db", str(db_file), "backup", "--keep", "2"]) == 0
+            time.sleep(1.05)                         # the copies are named to the second
+    copies = sorted((tmp_path / "backups").glob("cp-*.db"))
+    assert len(copies) == 2
+    copy = Database(f"sqlite:///{copies[-1]}")
+    with copy.session() as s:
+        assert [d.name for d in s.query(m.Dataset)] == ["Live"]
