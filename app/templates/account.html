@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Account · Sawing patterns{% endblock %}
+{% block content %}
+<h1>Your account</h1>
+<div class="panel" style="max-width: 32rem">
+  <h2 style="margin-top:0">Change your password</h2>
+  <form method="post" action="/account/password">
+    <div class="form-grid">
+      <label class="field">Current password <input type="password" name="current" autocomplete="current-password" required></label>
+      <label class="field">New password <span class="unit">at least 8 characters</span>
+        <input type="password" name="new" autocomplete="new-password" minlength="8" required></label>
+    </div>
+    <p><button type="submit">Change password</button></p>
+  </form>
+</div>
+
+{% if user.is_admin %}
+<div class="panel">
+  <h2 style="margin-top:0">People who can sign in</h2>
+  <table class="data">
+    <thead><tr><th class="text">User name</th><th class="text">Administrator</th><th class="text">Last signed in</th><th class="text"></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr><td class="text">{{ u.username }}{% if u.id == user.id %} <span class="tag">you</span>{% endif %}</td>
+        <td class="text">{{ "yes" if u.is_admin else "" }}</td>
+        <td class="text">{{ u.last_login.strftime("%Y-%m-%d %H:%M") if u.last_login else "never" }}</td>
+        <td class="text">
+          <form class="inline-form" method="post" action="/users/{{ u.id }}/password">
+            <input type="password" name="password" placeholder="New password" minlength="8" size="14" autocomplete="new-password" required>
+            <button type="submit" class="secondary">Set password</button></form>
+          {% if u.id != user.id %}
+          <form class="inline-form" method="post" action="/users/{{ u.id }}/delete" onsubmit='return confirm({{ ("Remove " ~ u.username ~ "? They will no longer be able to sign in.")|tojson }})'>
+            <button type="submit" class="danger">Remove</button></form>
+          {% endif %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <h3>Add someone</h3>
+  <form method="post" action="/users" class="inline-form" style="flex-wrap:wrap">
+    <input name="username" placeholder="User name" required autocomplete="off">
+    <input type="password" name="password" placeholder="Password (8+ characters)" minlength="8" required autocomplete="new-password">
+    <label class="check"><input type="checkbox" name="is_admin"> Administrator (can add people and download backups)</label>
+    <button type="submit">Add</button>
+  </form>
+  <p class="help">Give each person their own name and password, and tell them the password yourself (it is not emailed).</p>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">Backup</h2>
+  <p class="help">A copy of every dataset, run and search, taken while the app is running. Keep one somewhere safe from time to time
+    (for example weekly). To restore it, see the deployment guide.</p>
+  <a class="button" href="/backup">Download a backup</a>
+</div>
+{% endif %}
+{% endblock %}

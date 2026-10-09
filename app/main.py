@@ -8,12 +8,14 @@ import pathlib
 import re
 import shutil
 import tempfile
+import time
 from urllib.parse import urlencode
 
 import numpy as np
 from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy import inspect as sqlalchemy_inspect
@@ -22,10 +24,11 @@ from engine import generator as G
 from engine import loggen
 from engine.sawing import check_pattern
 
+from . import auth
 from . import models as m
 from . import snapshot
 from . import genjobs, reports, runs, simview, store, svg, tables
-from .db import Database, db_url, migrate
+from .db import Database, backup_database, db_url, migrate
 
 HERE = pathlib.Path(__file__).parent
 
@@ -54,6 +57,10 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
     db = Database(url)
     runs.close_interrupted(db)
     genjobs.close_interrupted(db)
+    db_file = pathlib.Path(url[len("sqlite:///"):]) if url.startswith("sqlite:///") else None
+    key = auth.secret_key(db_file)
+    with db.session() as s:
+        auth.ensure_admin_from_env(s)
     app = FastAPI(title="Sawing patterns")
     app.state.db = db
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
@@ -62,7 +69,140 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
     tpl.env.globals.update(store=store, svg=svg, objectives=G.OBJECTIVE_LABELS)
 
     def page(request: Request, name: str, **ctx):
+        ctx.setdefault("user", getattr(request.state, "user", None))
         return tpl.TemplateResponse(request, name, ctx)
+
+    # -------------------------------------------------------------- sign-in
+
+    OPEN_PATHS = ("/login", "/healthz", "/static/")
+
+    @app.middleware("http")
+    async def require_login(request: Request, call_next):
+        request.state.user = None
+        path = request.url.path
+        uid = auth.read_token(request.cookies.get(auth.COOKIE), key)
+        with db.session() as s:
+            user = s.get(m.User, uid) if uid is not None else None
+            if user is not None:
+                s.expunge(user)
+            needed = auth.login_required(s)
+        request.state.user = user
+        if needed and user is None and not path.startswith(OPEN_PATHS):
+            if path.startswith("/api/"):
+                return JSONResponse({"detail": "Please sign in."}, 401)
+            back = path + (f"?{request.url.query}" if request.url.query else "") if request.method == "GET" else "/"
+            return go("/login", next=back, msg="Please sign in." if request.method == "GET" else
+                      "Your session ended; please sign in again and repeat the last step.")
+        return await call_next(request)
+
+    def _safe_next(target: str | None) -> str:
+        return target if target and target.startswith("/") and not target.startswith("//") else "/"
+
+    def _admin(request: Request) -> m.User:
+        user = request.state.user
+        if user is None or not user.is_admin:
+            raise HTTPException(403, "Only an administrator can do that.")
+        return user
+
+    @app.get("/healthz")
+    def healthz():
+        return {"ok": True}
+
+    @app.get("/login", response_class=HTMLResponse)
+    def login_page(request: Request, next: str = "/", msg: str = ""):
+        return page(request, "login.html", next=_safe_next(next), msg=msg, section="login")
+
+    @app.post("/login")
+    def login(request: Request, username: str = Form(""), password: str = Form(""), next: str = Form("/")):
+        with db.session() as s:
+            user = auth.authenticate(s, username, password)
+            if user is None:
+                time.sleep(1.0)                  # slow down password guessing
+                return go("/login", next=_safe_next(next), msg="That user name and password do not match.")
+            s.commit()
+            token = auth.make_token(user.id, key)
+        resp = RedirectResponse(_safe_next(next), 303)
+        resp.set_cookie(auth.COOKIE, token, max_age=auth.SESSION_HOURS * 3600, httponly=True, samesite="lax",
+                        secure=request.url.scheme == "https", path="/")
+        return resp
+
+    @app.post("/logout")
+    def logout():
+        resp = go("/login", msg="Signed out.")
+        resp.delete_cookie(auth.COOKIE, path="/")
+        return resp
+
+    @app.get("/account", response_class=HTMLResponse)
+    def account_page(request: Request, msg: str = ""):
+        if request.state.user is None:
+            return go("/login")
+        with db.session() as s:
+            users = s.scalars(select(m.User).order_by(m.User.username)).all() if request.state.user.is_admin else []
+        return page(request, "account.html", users=users, msg=msg, section="account")
+
+    @app.post("/account/password")
+    def change_own_password(request: Request, current: str = Form(""), new: str = Form("")):
+        me = request.state.user
+        if me is None:
+            return go("/login")
+        with db.session() as s:
+            user = s.get(m.User, me.id)
+            if not auth.check_password(current, user.password_hash):
+                return go("/account", msg="Your current password is not right.")
+            problem = auth.password_problem(new)
+            if problem:
+                return go("/account", msg=problem)
+            user.password_hash = auth.hash_password(new)
+            s.commit()
+        return go("/account", msg="Password changed.")
+
+    @app.post("/users")
+    def add_user(request: Request, username: str = Form(""), password: str = Form(""), is_admin: str = Form("")):
+        _admin(request)
+        with db.session() as s:
+            try:
+                auth.add_user(s, username, password, is_admin == "on")
+            except ValueError as e:
+                return go("/account", msg=str(e))
+            s.commit()
+        return go("/account", msg=f"{username.strip()} can now sign in.")
+
+    @app.post("/users/{uid}/password")
+    def reset_password(request: Request, uid: int, password: str = Form("")):
+        _admin(request)
+        problem = auth.password_problem(password)
+        if problem:
+            return go("/account", msg=problem)
+        with db.session() as s:
+            user = s.get(m.User, uid)
+            if user is None:
+                raise HTTPException(404)
+            user.password_hash = auth.hash_password(password)
+            s.commit()
+            return go("/account", msg=f"New password set for {user.username}.")
+
+    @app.post("/users/{uid}/delete")
+    def delete_user(request: Request, uid: int):
+        me = _admin(request)
+        if uid == me.id:
+            return go("/account", msg="You cannot remove your own account.")
+        with db.session() as s:
+            user = s.get(m.User, uid)
+            if user is not None:
+                s.delete(user)
+                s.commit()
+        return go("/account", msg="Account removed.")
+
+    @app.get("/backup")
+    def download_backup(request: Request):
+        """A consistent copy of the whole database, taken while the app runs (administrators only)."""
+        _admin(request)
+        if db_file is None:
+            raise HTTPException(404)
+        folder = pathlib.Path(tempfile.mkdtemp())
+        copy = backup_database(db_file, folder, keep=0)
+        return FileResponse(copy, filename=copy.name, media_type="application/x-sqlite3",
+                            background=BackgroundTask(shutil.rmtree, folder, ignore_errors=True))
 
     def dataset_or_404(s, ds_id: int) -> m.Dataset:
         ds = s.get(m.Dataset, ds_id)
