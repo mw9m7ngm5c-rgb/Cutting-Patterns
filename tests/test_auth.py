@@ -165,3 +165,20 @@ def test_restore_command_puts_a_backup_back_and_keeps_the_replaced_data(tmp_path
         main(["--db", str(db), "restore", str(tmp_path / "junk.db")])
     with pytest.raises(SystemExit, match="No backup"):
         main(["--db", str(db), "restore", str(tmp_path / "missing.db")])
+
+
+def test_bad_admin_settings_do_not_stop_the_server(make, capsys):
+    c = make(CP_REQUIRE_LOGIN="1", CP_ADMIN_USER="anna", CP_ADMIN_PASSWORD="short")
+    assert "at least 8" in capsys.readouterr().err
+    page = c.get("/login").text
+    assert "could not be created" in page and "CP_ADMIN_PASSWORD" in page
+    assert c.get("/healthz").status_code == 200
+
+
+def test_a_cloud_server_without_any_account_says_how_to_add_one(make):
+    c = make(CP_REQUIRE_LOGIN="1")
+    assert "Nobody can sign in yet" in c.get("/login").text
+    with c.db.session() as s:
+        auth.add_user(s, "anna", "first-password", is_admin=True)
+        s.commit()
+    assert "Nobody can sign in yet" not in c.get("/login").text

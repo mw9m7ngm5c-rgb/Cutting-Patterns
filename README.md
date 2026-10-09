@@ -36,7 +36,7 @@ Back up the database at any time (safe while the app runs): `.venv/bin/python -m
 Tests and the engine command line:
 
 ```
-.venv/bin/python -m pytest                         # 250 tests
+.venv/bin/python -m pytest                         # 252 tests
 .venv/bin/python cli.py validate --dataset tests/fixtures/ngomi_1 --run Test1
 .venv/bin/python cli.py simulate --dataset tests/fixtures/ngomi_1 --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
 ```

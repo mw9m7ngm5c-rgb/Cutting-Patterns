@@ -7,6 +7,7 @@ import json
 import pathlib
 import re
 import shutil
+import sys
 import tempfile
 import time
 from urllib.parse import urlencode
@@ -60,7 +61,9 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
     db_file = pathlib.Path(url[len("sqlite:///"):]) if url.startswith("sqlite:///") else None
     key = auth.secret_key(db_file)
     with db.session() as s:
-        auth.ensure_admin_from_env(s)
+        setup_problem = auth.ensure_admin_from_env(s)
+    if setup_problem:
+        print(f"Sign-in set-up: {setup_problem}", file=sys.stderr, flush=True)
     app = FastAPI(title="Sawing patterns")
     app.state.db = db
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
@@ -110,7 +113,9 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
 
     @app.get("/login", response_class=HTMLResponse)
     def login_page(request: Request, next: str = "/", msg: str = ""):
-        return page(request, "login.html", next=_safe_next(next), msg=msg, section="login")
+        with db.session() as s:
+            problem = setup_problem if not s.scalar(select(func.count()).select_from(m.User)) else None
+        return page(request, "login.html", next=_safe_next(next), msg=msg, section="login", setup_problem=problem)
 
     @app.post("/login")
     def login(request: Request, username: str = Form(""), password: str = Form(""), next: str = Form("/")):

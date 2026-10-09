@@ -128,12 +128,23 @@ def authenticate(s: Session, username: str, password: str) -> m.User | None:
     return user
 
 
-def ensure_admin_from_env(s: Session) -> None:
+def ensure_admin_from_env(s: Session) -> str | None:
     """On a fresh server: create the first administrator from CP_ADMIN_USER / CP_ADMIN_PASSWORD if no
-    account by that name exists yet. Later changes to those variables do not alter existing accounts."""
+    account by that name exists yet. Later changes to those variables do not alter existing accounts.
+
+    A server that requires login but has no accounts cannot be used, so that case, and settings that
+    cannot make an account (a short password), come back as a message for the sign-in page instead of
+    stopping the app."""
     name, pw = os.environ.get("CP_ADMIN_USER", "").strip(), os.environ.get("CP_ADMIN_PASSWORD", "")
-    if not name or not pw:
-        return
-    if s.scalar(select(m.User).where(func.lower(m.User.username) == name.lower())) is None:
-        add_user(s, name, pw, is_admin=True)
-        s.commit()
+    if name and pw and s.scalar(select(m.User).where(func.lower(m.User.username) == name.lower())) is None:
+        try:
+            add_user(s, name, pw, is_admin=True)
+            s.commit()
+        except ValueError as e:
+            s.rollback()
+            return (f"The first administrator could not be created: {e} Change CP_ADMIN_PASSWORD "
+                    "in the server's environment settings and restart it.")
+    if not s.scalar(select(func.count()).select_from(m.User)) and login_required(s):
+        return ("Nobody can sign in yet. Set CP_ADMIN_USER and CP_ADMIN_PASSWORD in the server's "
+                "environment settings and restart it, or run: python -m app adduser NAME --admin")
+    return None
