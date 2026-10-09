@@ -137,6 +137,29 @@ def _score(objective: EdgingObjective, thickness: Size, width: Size, length_mm: 
     return (volume, tie)
 
 
+def width_interval(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickness: Size, width: Size,
+                   products: Products, rules: Rules, ladders: dict) -> tuple[np.ndarray, np.ndarray, float]:
+    """Where the first edge of a board of this width may lie at every disc, as far as the wane rule for
+    the product allows: (lo, hi, allowed wane depth). An impossible disc has lo = +inf, hi = -inf.
+    ``width`` gives the wane rule (by its dry size) and the board's real width (its wet size)."""
+    rule = products.wane_rule(thickness.dry, width.dry)
+    t_ref = thickness.wet if rules.wane_on_wet_sizes else thickness.dry
+    w_ref = width.wet if rules.wane_on_wet_sizes else width.dry
+    depth = rule.thickness_pct / 100.0 * t_ref
+    allow = rule.width_pct / 100.0 * w_ref * rules.width_wane_edge_share
+    if rule.length_wane <= 0 or depth <= _EPS or allow <= _EPS:
+        depth = allow = 0.0                    # no wane at all
+    depth = min(depth, (v_hi - v_lo) / 2.0)
+    key = (round(depth, 6), round(v_lo, 6), round(v_hi, 6))
+    if key not in ladders:
+        ladders[key] = (depth_ladder(chord, v_lo, +1.0, depth, rules.wane_ladder),
+                        depth_ladder(chord, v_hi, -1.0, depth, rules.wane_ladder))
+    lo_face, hi_face = ladders[key]
+    lo1, hi1 = face_interval(lo_face, width.wet, allow)
+    lo2, hi2 = face_interval(hi_face, width.wet, allow)
+    return np.maximum(lo1, lo2), np.minimum(hi1, hi2), depth
+
+
 def best_board(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickness: Size,
                widths: list[Size], products: Products, objective: EdgingObjective, rules: Rules,
                fixed_u0: float | None = None, cache: dict | None = None) -> Choice | None:
@@ -158,22 +181,9 @@ def best_board(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickne
         if not lengths:
             continue
         rule = products.wane_rule(thickness.dry, width.dry)
-        t_ref = thickness.wet if rules.wane_on_wet_sizes else thickness.dry
-        w_ref = width.wet if rules.wane_on_wet_sizes else width.dry
-        depth = rule.thickness_pct / 100.0 * t_ref
-        allow = rule.width_pct / 100.0 * w_ref * rules.width_wane_edge_share
-        if rule.length_wane <= 0 or depth <= _EPS or allow <= _EPS:
-            depth = allow = 0.0                    # no wane at all
-        depth = min(depth, (v_hi - v_lo) / 2.0)
-        key = (round(depth, 6), round(v_lo, 6), round(v_hi, 6))
-        if key not in ladders:
-            ladders[key] = (depth_ladder(chord, v_lo, +1.0, depth, rules.wane_ladder),
-                            depth_ladder(chord, v_hi, -1.0, depth, rules.wane_ladder))
-        lo_face, hi_face = ladders[key]
+        lo_all, hi_all, depth = width_interval(chord, z_mm, v_lo, v_hi, thickness, width, products, rules, ladders)
         w = width.wet
-        lo1, hi1 = face_interval(lo_face, w, allow)
-        lo2, hi2 = face_interval(hi_face, w, allow)
-        lo_all, hi_all = np.maximum(lo1, lo2), np.minimum(hi1, hi2)
+        lo_face, hi_face = ladders[(round(depth, 6), round(v_lo, 6), round(v_hi, 6))]
         if fixed_u0 is not None:
             ok = (lo_all <= fixed_u0 + _EPS) & (fixed_u0 <= hi_all + _EPS)
             lo_all, hi_all = np.where(ok, fixed_u0, np.inf), np.where(ok, fixed_u0, -np.inf)
@@ -227,3 +237,100 @@ def _limit_wane_length(face_a, face_b, w: float, u0: float, first: int, last: in
         else:
             last -= 1
     return first, last, 0
+
+
+def _runs(ok: np.ndarray, z_mm: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """For each row of ok (rows x discs): the longest stretch of True discs as (first, last, span mm).
+    Ties go to the stretch nearest the small end; a row with no True disc has span -1."""
+    rows = ok.shape[0]
+    first = np.zeros(rows, dtype=int)
+    last = np.zeros(rows, dtype=int)
+    best = np.full(rows, -1.0)
+    edges = np.diff(np.pad(ok.astype(np.int8), ((0, 0), (1, 1))), axis=1)
+    s_row, s_col = np.nonzero(edges == 1)           # a stretch starts here ...
+    _, e_col = np.nonzero(edges == -1)              # ... and ends just before here (same order)
+    if not len(s_row):
+        return first, last, best
+    z = z_mm.astype(float)
+    span = z[e_col - 1] - z[s_col]
+    order = np.lexsort((s_col, -span, s_row))       # per row: longest first, then nearest the small end
+    r = s_row[order]
+    top = order[np.r_[True, r[1:] != r[:-1]]]
+    first[s_row[top]] = s_col[top]
+    last[s_row[top]] = e_col[top] - 1
+    best[s_row[top]] = span[top]
+    return first, last, best
+
+
+def fixed_edger(chord: Chord, z_mm: np.ndarray, v_lo: float, v_hi: float, thickness: Size,
+                pieces: list[tuple[float, Size | None]], products: Products, objective: EdgingObjective,
+                rules: Rules, cache: dict | None = None) -> list[Choice]:
+    """An edger whose blades are fixed at set distances apart (ASSUMPTIONS A-61).
+
+    pieces: one per gap between neighbouring blades, as (offset of the gap's first edge from the
+    first gap's first edge, product it makes), the product's wet size being the gap; None for a gap
+    that makes no product of this thickness. All blades cut together; the flitch is moved across the
+    blades to wherever the boards it gives are best by the edging objective. Every gap whose piece
+    passes the wane rule over a valid length becomes a board; the rest is offcut.
+    Returns the boards (an empty list when none can be made)."""
+    ladders = cache if cache is not None else {}
+    usable = [(i, off, w) for i, (off, w) in enumerate(pieces) if w is not None
+              and products.allowed_lengths_mm(thickness.dry, w.dry)]
+    if not usable:
+        return []
+    spans = []
+    for i, off, w in usable:
+        lo, hi, _ = width_interval(chord, z_mm, v_lo, v_hi, thickness, w, products, rules, ladders)
+        spans.append((i, off, w, lo - off, hi - off))     # allowed positions of the first gap's edge
+    ends = np.concatenate([np.concatenate([lo[np.isfinite(lo)], hi[np.isfinite(hi)]]) for _, _, _, lo, hi in spans])
+    if not len(ends):
+        return []
+    # the boards only change where some gap's allowance starts or stops, so those positions (and the
+    # points halfway between them) cover every case
+    u = np.unique(np.round(ends, 1))
+    u = np.unique(np.concatenate([u, (u[1:] + u[:-1]) / 2.0])) if len(u) > 1 else u
+    total = np.zeros(len(u))
+    tie = np.zeros(len(u))
+    found = []
+    for i, off, w, lo, hi in spans:
+        ok = (lo[None, :] <= u[:, None] + _EPS) & (u[:, None] <= hi[None, :] + _EPS)
+        first, last, span = _runs(ok, z_mm)
+        lengths = np.asarray(sorted(products.allowed_lengths_mm(thickness.dry, w.dry)), dtype=float)
+        idx = np.searchsorted(lengths, span + 1e-6, side="right") - 1      # longest allowed length that fits
+        fit = np.where(idx >= 0, lengths[np.maximum(idx, 0)], 0.0)
+        vol = thickness.dry * w.dry * fit
+        if objective == EdgingObjective.VALUE:
+            price = {x: products.price(thickness.dry, w.dry, int(x)) for x in np.unique(fit) if x > 0}
+            gain = np.array([vol[k] * price.get(fit[k], 0.0) for k in range(len(u))])
+        elif objective == EdgingObjective.LENGTH:
+            gain = fit.astype(float)
+        else:
+            gain = vol.astype(float)
+        total += gain
+        tie += vol
+        found.append((i, off, w, first, last, fit))
+    score = total + 1e-9 * tie
+    if score.max() <= 0:
+        return []
+    # of equally good positions take the middle of the widest unbroken stretch of them, so the flitch
+    # sits centred on the blades as far as the boards allow
+    top = score >= score.max() - 1e-9
+    runs, start = [], None
+    for j, on in enumerate(top):
+        if on and start is None:
+            start = j
+        if (not on or j == len(top) - 1) and start is not None:
+            stop = j if on else j - 1
+            runs.append((u[stop] - u[start], start, stop))
+            start = None
+    _, a, b = max(runs)
+    mid = (u[a] + u[b]) / 2.0
+    k = a + int(np.argmin(np.abs(u[a:b + 1] - mid)))
+    out = []
+    for i, off, w, first, last, fit in found:
+        if fit[k] > 0:
+            length = int(fit[k])
+            price = products.price(thickness.dry, w.dry, length)
+            out.append(Choice(thickness, w, v_lo, v_hi, float(u[k] + off), int(first[k]), int(last[k]), length,
+                              _score(objective, thickness, w, length, price, rules.prefer_wider_on_tie)))
+    return out

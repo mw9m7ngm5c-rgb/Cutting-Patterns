@@ -211,3 +211,54 @@ def test_turning_a_swept_log_changes_what_it_gives():
     up = saw(log, "25/114/25", "2*25 3*38 2*25")
     side = saw(log, "25/114/25", "2*25 3*38 2*25", log_rotation_deg=90)
     assert up.dry_board_volume != pytest.approx(side.dry_board_volume)
+
+
+# ------------------------------------------------------------------ edger with fixed blade spacing
+
+def test_fixed_blades_make_one_board_per_gap_one_kerf_apart():
+    log = Log(1, 40.0, 3.0, 8.0)
+    r = saw(log, "50/76/50", "2*25", edger_blades=3, edger_spacing=(160.0, 160.0))
+    left = sorted((b for b in r.boards if b.board_type == 0), key=lambda b: b.bottom)
+    assert [b.label for b in left] == ["50x152x3.0m", "50x152x3.0m"]
+    assert left[1].bottom == pytest.approx(left[0].top + 5.0)            # the middle blade's 5 mm kerf
+    assert left[0].bottom == pytest.approx(-162.5) and left[1].top == pytest.approx(162.5)   # centred on the blades
+    assert balanced(r)
+
+
+def test_each_gap_makes_the_widest_product_it_holds():
+    log = Log(1, 40.0, 3.0, 8.0)
+    r = saw(log, "50/76/50", "2*25", edger_blades=2, edger_spacing=(120.0,))
+    side = [b for b in r.boards if b.board_type == 0]
+    assert [b.width for b in side] == [114] and side[0].top - side[0].bottom == pytest.approx(120.0)
+    # a gap narrower than any product makes nothing from that flitch
+    none = saw(log, "50/76/50", "2*25", edger_blades=2, edger_spacing=(60.0,))
+    assert not [b for b in none.boards if b.board_type == 0] and balanced(none)
+
+
+def test_fixed_blades_slide_the_flitch_to_the_best_position_and_waste_the_rest():
+    log = Log(1, 30.0, 3.0, 8.0)
+    # four blades, three gaps; on a 30 cm log only two fit beside each other on the sideboard
+    r = saw(log, "38/114/38", "3*38", edger_blades=4, edger_spacing=(107.0, 160.0, 107.0))
+    side = sorted((b for b in r.boards if b.board_type == 1), key=lambda b: b.bottom)
+    assert 1 <= len(side) <= 3 and {b.width for b in side} <= {102, 152}
+    for a, b in zip(side, side[1:]):
+        assert b.bottom == pytest.approx(a.top + 5.0)
+    assert balanced(r)
+
+
+def test_fixed_blades_keep_full_width_cant_boards():
+    log = Log(1, 30.0, 3.0, 10.0)
+    r = saw(log, "25/114/25", "3*38", edger_blades=3, edger_spacing=(81.0, 81.0))
+    cant = [b for b in r.boards if b.board_type == 2]
+    assert any(b.width == 114 and not b.edged for b in cant)
+
+
+def test_more_movable_blades_give_more_boards_side_by_side():
+    log = Log(1, 45.0, 3.0, 8.0)
+    three = saw(log, "50/76/50", "2*25", edger_blades=3)
+    five = saw(log, "50/76/50", "2*25", edger_blades=5)
+    n = lambda r: len([b for b in r.boards if b.board_type == 0])
+    assert n(five) >= n(three) == 2 and five.dry_board_volume >= three.dry_board_volume - 1e-12
+    row = sorted((b for b in five.boards if b.board_type == 0), key=lambda b: b.bottom)
+    for a, b in zip(row, row[1:]):
+        assert b.bottom == pytest.approx(a.top + 5.0)

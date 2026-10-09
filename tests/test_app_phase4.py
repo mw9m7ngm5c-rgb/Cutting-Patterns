@@ -159,3 +159,30 @@ def test_snapshots_from_before_phase_4_still_load(client):
         d["settings"].pop(k, None)
     old = snapshot.from_dict(d)
     assert old.products.grade_outputs == {} and old.settings.variation is None
+
+
+def test_edger_blades_and_spacing_on_the_machines_page(client):
+    url = f"/d/{client.ds}/machines/{client.line}"
+    base = {"tab": "edging", "edging_objective": "0", "edger_kerf": "5", "second_board_width": "Best",
+            "max_boards_per_flitch": "0", "primary_resaw_present": "1", "primary_resaw": "on",
+            "secondary_resaw_present": "1", "secondary_resaw": "on", "primary_resaw_kerf": "5",
+            "secondary_resaw_kerf": "5"}
+    bad = client.post(url, data={**base, "edger_blades": "3", "edger_spacing": "160"}, follow_redirects=True)
+    assert "3 blades have 2 gaps" in bad.text
+    bad = client.post(url, data={**base, "edger_blades": "3", "edger_spacing": "160 abc"}, follow_redirects=True)
+    assert "numbers above 0" in bad.text
+    client.post(url, data={**base, "edger_blades": "4", "edger_spacing": "107, 160; 107"})
+    with client.db.session() as s:
+        ln = s.get(m.ProductionLine, client.line)
+        assert (ln.edger_blades, ln.edger_spacing) == (4, "107 160 107")
+        e = store.engine_dataset(s, client.ds)
+    assert e.lines[0].edger_spacing == (107.0, 160.0, 107.0)
+    assert snapshot.loads(snapshot.dumps(e)).lines[0] == e.lines[0]
+    assert "Distance between blades" in client.get(f"/d/{client.ds}/machines", params={"tab": "edging"}).text
+    client.post(f"/d/{client.ds}/runs", data={"name": "Fixed edger"})
+    with client.db.session() as s:
+        run = s.query(m.Run).filter_by(name="Fixed edger").one()
+        assert run.status == "done" and reports.run_patterns(s, run.id)[0].boards > 0
+    client.post(url, data={**base, "edger_blades": "3", "edger_spacing": ""})
+    with client.db.session() as s:
+        assert s.get(m.ProductionLine, client.line).edger_spacing == ""

@@ -6,7 +6,7 @@
   "secondary_resaw_kerf": "Cant board resaw kerf (mm)", "cant_guiding": "Cant guiding", "max_sweep": "Largest sweep followed (mm/m)",
   "log_rotation_deg": "Log rotation (°)", "log_misalignment_mm": "Log misalignment (mm)", "primary_offset_mm": "Primary saw offset (mm)",
   "cant_misalignment_mm": "Cant misalignment (mm)", "secondary_offset_mm": "Secondary saw offset (mm)",
-  "edging_objective": "Edge for", "edger_blades": "Edger blades", "edger_kerf": "Edger kerf (mm)",
+  "edging_objective": "Edge for", "edger_blades": "Edger blades", "edger_kerf": "Edger kerf (mm)", "edger_spacing": "Distance between edger blades (mm)",
   "second_board_width": "Second board width", "max_boards_per_flitch": "Most boards per flitch", "saw_type": "Saw type"} %}
 {% macro val(k, x) -%}
   {%- if x is none %}–{% elif k == "cant_guiding" %}{{ store.CANT_GUIDING[x] }}{% elif k == "saw_type" %}{{ store.SAW_TYPES[x] }}

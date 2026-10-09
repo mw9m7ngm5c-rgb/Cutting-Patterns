@@ -221,6 +221,9 @@ class ProductionLine:
     edger_kerf: float = 5.0
     second_board_width: str = "Best"
     max_boards_per_flitch: int = 0
+    # fixed-spacing edger: wet distance (mm) between each pair of neighbouring blades, left to right.
+    # Empty = blades that move to suit each flitch (the edger then chooses the widths).
+    edger_spacing: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)

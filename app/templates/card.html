@@ -64,7 +64,8 @@
       <dl class="kv">
         <dt>Primary kerf</dt><dd>{{ card.line.primary_kerf }} mm{% if card.line.primary_outside_kerf %} ({{ card.line.primary_outside_kerf }} outside){% endif %}</dd>
         <dt>Secondary kerf</dt><dd>{{ card.line.secondary_kerf }} mm{% if card.line.secondary_outside_kerf %} ({{ card.line.secondary_outside_kerf }} outside){% endif %}</dd>
-        <dt>Edger</dt><dd>{{ card.line.edger_blades }} blades, {{ card.line.edger_kerf }} mm kerf</dd>
+        <dt>Edger</dt><dd>{{ card.line.edger_blades }} blades, {{ card.line.edger_kerf }} mm kerf{% if card.line.edger_spacing %},
+          fixed {{ card.line.edger_spacing|map("int")|join(" + ") }} mm apart{% else %}, movable{% endif %}</dd>
         <dt>Resaw</dt><dd>{% if card.line.primary_resaw or card.line.secondary_resaw %}{{ "sideboards" if card.line.primary_resaw }}{{ " and " if card.line.primary_resaw and card.line.secondary_resaw }}{{ "cant boards" if card.line.secondary_resaw }}{% else %}off{% endif %}</dd>
       </dl>
     </div>
