@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Datasets</h1>
+<p class="help">A dataset holds one set of logs, products, machines and sawing patterns, with the batch runs made from them.</p>
+<div class="panel">
+  {% if rows %}
+  <table class="data">
+    <thead><tr><th class="text">Name</th><th class="text">Source</th><th>Logs</th><th>Patterns</th><th>Runs</th><th class="text">Changed</th><th class="text"></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="text"><a href="/d/{{ r.ds.id }}"><strong>{{ r.ds.name }}</strong></a></td>
+        <td class="text">{{ r.ds.source }}</td>
+        <td>{{ r.logs }}</td><td>{{ r.patterns }}</td><td>{{ r.runs }}</td>
+        <td class="text">{{ r.ds.updated_at.strftime("%Y-%m-%d %H:%M") if r.ds.updated_at }}</td>
+        <td class="text">
+          <form class="inline-form" method="post" action="/datasets/{{ r.ds.id }}/duplicate"
+                onsubmit="const n = prompt('Name for the copy', '{{ r.ds.name|e }} (copy)'); if (!n) return false; this.name.value = n;">
+            <input type="hidden" name="name"><button class="secondary" type="submit">Save as…</button>
+          </form>
+          <form class="inline-form" method="post" action="/datasets/{{ r.ds.id }}/delete"
+                onsubmit="return confirm('Delete “{{ r.ds.name|e }}” and all its runs? This cannot be undone.')">
+            <button class="danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No datasets yet. Start a new one or import a Simsaw dataset below.</p>
+  {% endif %}
+</div>
+<div class="row">
+  <div class="panel grow">
+    <h2>New dataset</h2>
+    <p class="help">Starts with the Ngomi sizes, log classes, production line and settings. Prices, log prices and kerfs
+      are marked as placeholders until you replace them. No logs and no patterns.</p>
+    <form method="post" action="/datasets/new" class="inline-form">
+      <input name="name" placeholder="Name" required><button type="submit">Create</button>
+    </form>
+  </div>
+  <div class="panel grow">
+    <h2>Import from Simsaw</h2>
+    <p class="help">Reads a Simsaw 6 .mdb file: logs, classes, products, wane, machines, patterns and settings.
+      Batch runs in the file come across with Simsaw's own results, for comparison.</p>
+    <form method="post" action="/datasets/import" enctype="multipart/form-data" class="inline-form">
+      <input type="file" name="file" accept=".mdb,.accdb" required>
+      <input name="name" placeholder="Name (optional)">
+      <button type="submit">Import</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

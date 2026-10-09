@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="no-print"><a href="/d/{{ ds.id }}/generator?tab={{ job.kind }}">← New search</a> · <a href="/d/{{ ds.id }}/generator?tab=history">Earlier searches</a></p>
+<h1>{{ job.title }}</h1>
+
+{% if job.status in ("running", "queued") %}
+<div class="panel" id="live" data-job="{{ job.id }}">
+  <p><strong id="stage">{{ job.stage or "starting" }}</strong></p>
+  <span class="progress" style="width: 24rem"><span id="bar" style="width:0%"></span></span> <span id="count"></span>
+  <form method="post" action="/d/{{ ds.id }}/generator/{{ job.id }}/cancel" style="margin-top:.8rem"><button class="danger" type="submit">Cancel</button></form>
+</div>
+{% elif job.status == "failed" %}
+<div class="error">The search stopped: {{ job.message.split("\n")[0] }}</div>
+{% else %}
+{% if job.message %}<div class="msg">{{ job.message }}</div>{% endif %}
+
+{% if job.kind == "class" %}
+  {% set meta = result.meta %}
+  <p class="help">{{ "{:,}".format(meta.enumerated).replace(",", " ") }} patterns built and checked on tapered logs of
+    {{ meta.diameters_mm|map("int")|join(", ") }} mm small-end diameter and {{ "%.1f"|format(meta.length_m) }} m;
+    {{ meta.notes|join(" ") }} {{ meta.seconds }} s.
+    {% if p.mode == "diameter" %}Logs: three ideal logs from {{ p.diameter_cm }} cm.{% else %}Logs: the {{ meta.logs }} logs of class {{ p.class_no }}.{% endif %}
+    {% if shown_log %}Diagrams show log {{ shown_log.no }} ({{ shown_log.sed_cm }} cm × {{ shown_log.length_m }} m).{% endif %}</p>
+  {% if not result.ranked %}
+    <div class="error">No pattern met every constraint. Relax the limits (for example the minimum share or "must yield") and try again.</div>
+  {% endif %}
+  {% for r in result.ranked %}
+  <div class="panel result-card">
+    <div class="row">
+      <div style="flex: 0 0 18rem">{{ svg.diagram(diagrams[loop.index0], labels=True) if diagrams[loop.index0] and diagrams[loop.index0].large_end }}</div>
+      <div class="grow">
+        <h3 style="margin-top:0">{{ loop.index }}. <code>{{ r.primary }}</code> &nbsp; <code>{{ r.secondary }}</code></h3>
+        <dl class="kv" style="max-width: 30rem">
+          <dt>Dry recovery</dt><dd><strong>{{ r.dry_recovery|pct }}</strong></dd>
+          <dt>Wet recovery</dt><dd>{{ r.wet_recovery|pct }}</dd>
+          <dt>Nett value</dt><dd>{{ r.nett_value|money }} /m³ log</dd>
+          <dt>Boards per log</dt><dd>{{ r.boards_per_log|num(1) }} (average {{ r.average_length|num(2) }} m)</dd>
+          {% if p.target %}<dt>Target {{ p.target[0]|int }}×{{ p.target[1]|int }}</dt><dd>{{ r.target_volume|num(3) }} m³ · {{ r.target_share|pct }} of sawn</dd>{% endif %}
+          <dt>Blades</dt><dd>{{ r.primary_blades }} primary · {{ r.secondary_blades }} secondary</dd>
+        </dl>
+        <p class="help" style="margin-top:.5rem">{% for x in r.mix %}{{ x.thickness|int }}×{{ x.width|int }}: {{ x.share|pct }}{{ " · " if not loop.last }}{% endfor %}</p>
+        <div class="no-print" style="display:flex; gap:.4rem; flex-wrap:wrap; align-items:center">
+          <form class="inline-form" method="post" action="/d/{{ ds.id }}/generator/{{ job.id }}/save">
+            <input type="hidden" name="primary" value="{{ r.primary }}"><input type="hidden" name="secondary" value="{{ r.secondary }}">
+            <select name="class_id">{% for c in classes %}<option value="{{ c.id }}" {{ "selected" if c.id == default_class }}>Class {{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }}</option>{% endfor %}</select>
+            <button type="submit">Save to patterns</button>
+          </form>
+          {% if default_class %}
+          <a class="button secondary" target="_blank" href="/d/{{ ds.id }}/card?{{ {'line_id': p.line_id, 'class_id': default_class, 'primary': r.primary, 'secondary': r.secondary}|urlencode }}">Saw setting card</a>
+          {% endif %}
+          {% set cls_no = (classes|selectattr("id", "equalto", default_class)|first).no if default_class else "" %}
+          <a class="button secondary" href="/d/{{ ds.id }}/patterns#{{ {'line': p.line_id, 'class': cls_no, 'p': r.primary, 's': r.secondary}|urlencode }}">Open on the pattern screen</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+{% else %}
+  {% set ch = chart %}
+  <form class="panel no-print" method="get" style="display:flex; gap:1.2rem; flex-wrap:wrap; align-items:end">
+    <label class="check"><input type="radio" name="group" value="n" {{ "checked" if group == "n" }}> A set number of classes</label>
+    <label class="field">Classes<input name="n" value="{{ n }}" inputmode="numeric" size="4"></label>
+    <label class="check"><input type="radio" name="group" value="tol" {{ "checked" if group == "tol" }}> Group while within</label>
+    <label class="field">{{ "R/m³ of each diameter's best" if p.objective == "value" else "recovery points of each diameter's best" }}
+      <input name="tol" value="{{ tol }}" inputmode="decimal" size="6"></label>
+    <button type="submit" class="secondary">Suggest classes</button>
+  </form>
+  <div class="panel">
+    {% set w = 34 %}{% set h = 220 %}{% set n = ch.bars|length %}
+    {% set palette = ["#2f5d45", "#b88a4a", "#3f6fa3", "#9b2c2c", "#6b4f9e", "#3d8c8c", "#8a5a00", "#5c5c5c"] %}
+    <svg viewBox="0 0 {{ n * w + 60 }} {{ h + 60 }}" style="width:100%; max-width: {{ n * w + 60 }}px" role="img" aria-label="Best result per diameter">
+      {% set span = (ch.ymax - ch.ymin) or 1 %}
+      {% for b in ch.bars %}
+        {% set bh = (b.y - ch.ymin) / span * (h - 20) %}
+        <rect x="{{ 40 + loop.index0 * w + 3 }}" y="{{ h - bh }}" width="{{ w - 6 }}" height="{{ bh }}" fill="{{ palette[b.group % 8] }}">
+          <title>{{ b.sed|int }} cm: {{ "%.1f"|format(b.y) }} — {{ b.pattern }}</title></rect>
+        <text x="{{ 40 + loop.index0 * w + w / 2 }}" y="{{ h - bh - 4 }}" font-size="10" text-anchor="middle" fill="#333">{{ "%.0f"|format(b.y) if p.objective == "value" else "%.1f"|format(b.y) }}</text>
+        <text x="{{ 40 + loop.index0 * w + w / 2 }}" y="{{ h + 16 }}" font-size="11" text-anchor="middle" fill="#333">{{ b.sed|int }}</text>
+      {% endfor %}
+      <text x="{{ 40 + n * w / 2 }}" y="{{ h + 40 }}" font-size="12" text-anchor="middle" fill="#69716b">small-end diameter (cm) · bar: best {{ ch.unit }}</text>
+    </svg>
+  </div>
+  <div class="panel">
+    <h2 style="margin-top:0">Suggested log classes</h2>
+    <p class="help">Each diameter step was searched on its own, then the best three patterns of every step were sawn at every other
+      step. "Given up" is how far the class's single pattern falls short, on average, of the best pattern at each centimetre.</p>
+    <table class="data">
+      <thead><tr><th></th><th>SED<span class="unit">cm</span></th><th class="text">Pattern</th>
+        <th>{{ "Nett value" if p.objective == "value" else "Score" }}<span class="unit">{{ "R/m³" if p.objective == "value" else "% (mean)" }}</span></th>
+        <th>Best each cm<span class="unit">{{ "R/m³" if p.objective == "value" else "% (mean)" }}</span></th><th>Given up</th></tr></thead>
+      <tbody>{% for g in groups %}
+        <tr><td style="background: {{ palette[loop.index0 % 8] }}; width: 1rem"></td>
+          <td>{{ "%.1f"|format(g.from_cm) }} – {{ "%.1f"|format(g.to_cm) }}</td>
+          <td class="text"><code>{{ g.primary }}</code> &nbsp; <code>{{ g.secondary }}</code></td>
+          <td>{{ (g.score * scale)|num(2) }}</td><td>{{ (g.best * scale)|num(2) }}</td><td>{{ ((g.best - g.score) * scale)|num(2) }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    <form class="no-print" method="post" action="/d/{{ ds.id }}/generator/{{ job.id }}/apply" style="margin-top:.8rem"
+          onsubmit="return confirm('Replace every log class in this dataset with these {{ groups|length }} classes? The current classes and all their sawing patterns are deleted. Use Save as on the Datasets page first to keep a copy.')">
+      <input type="hidden" name="group" value="{{ group }}"><input type="hidden" name="value" value="{{ n if group == 'n' else tol }}">
+      <button type="submit">Use these as the log classes</button>
+      <span class="help">Replaces the classes and saves each one's pattern on {{ p.line_name }}. Other class limits and log prices are kept from the current classes.</span>
+    </form>
+  </div>
+  <div class="panel">
+    <h2 style="margin-top:0">Best patterns per diameter</h2>
+    <table class="data">
+      <thead><tr><th>SED<span class="unit">cm</span></th><th class="text">Best pattern</th><th>Dry recovery</th><th>Nett value<span class="unit">R/m³ log</span></th><th>Boards per log</th><th class="text">Runner-up</th></tr></thead>
+      <tbody>{% for st in result.steps %}
+        {% if st.ranked %}{% set b = st.ranked[0] %}
+        <tr><td>{{ st.sed|int }}</td><td class="text"><code>{{ b.primary }}</code> <code>{{ b.secondary }}</code></td>
+          <td>{{ b.dry_recovery|pct }}</td><td>{{ b.nett_value|num }}</td><td>{{ b.boards_per_log|num(1) }}</td>
+          <td class="text">{% if st.ranked|length > 1 %}<code>{{ st.ranked[1].primary }}</code> <code>{{ st.ranked[1].secondary }}</code> ({{ st.ranked[1].dry_recovery|pct }}){% endif %}</td></tr>
+        {% else %}<tr><td>{{ st.sed|int }}</td><td class="text" colspan="5">no pattern</td></tr>{% endif %}
+      {% endfor %}</tbody>
+    </table>
+  </div>
+{% endif %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const live = document.getElementById("live");
+if (live) {
+  const poll = async () => {
+    const r = await fetch(`/api/genjobs/${live.dataset.job}`).then(r => r.json());
+    document.getElementById("stage").textContent = r.stage || r.status;
+    document.getElementById("bar").style.width = (r.total ? 100 * r.progress / r.total : 0) + "%";
+    document.getElementById("count").textContent = r.total > 1 ? `${r.progress} / ${r.total}` : "";
+    if (["running", "queued"].includes(r.status)) setTimeout(poll, 600); else location.reload();
+  };
+  poll();
+}
+</script>
+{% endblock %}

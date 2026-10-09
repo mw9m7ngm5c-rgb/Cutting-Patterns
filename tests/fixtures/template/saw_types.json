@@ -1,0 +1,18 @@
+[
+ {
+  "saw_type_uid": 0,
+  "saw_type_name": "Cant/live"
+ },
+ {
+  "saw_type_uid": 1,
+  "saw_type_name": "Cant/live (grouped)"
+ },
+ {
+  "saw_type_uid": 2,
+  "saw_type_name": "Chipper/profiler"
+ },
+ {
+  "saw_type_uid": 3,
+  "saw_type_name": "Chipper/profiler (grouped)"
+ }
+]

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% set labels = {"primary_kerf": "Primary kerf (mm)", "primary_outside_kerf": "Primary outside kerf (mm)",
+  "primary_outside_blades": "Primary outside blades", "secondary_kerf": "Secondary kerf (mm)",
+  "secondary_outside_kerf": "Secondary outside kerf (mm)", "secondary_outside_blades": "Secondary outside blades",
+  "primary_resaw": "Resaw sideboards", "primary_resaw_kerf": "Sideboard resaw kerf (mm)", "secondary_resaw": "Resaw cant boards",
+  "secondary_resaw_kerf": "Cant board resaw kerf (mm)", "cant_guiding": "Cant guiding", "max_sweep": "Largest sweep followed (mm/m)",
+  "log_rotation_deg": "Log rotation (°)", "log_misalignment_mm": "Log misalignment (mm)", "primary_offset_mm": "Primary saw offset (mm)",
+  "cant_misalignment_mm": "Cant misalignment (mm)", "secondary_offset_mm": "Secondary saw offset (mm)",
+  "edging_objective": "Edge for", "edger_blades": "Edger blades", "edger_kerf": "Edger kerf (mm)",
+  "second_board_width": "Second board width", "max_boards_per_flitch": "Most boards per flitch", "saw_type": "Saw type"} %}
+{% macro val(k, x) -%}
+  {%- if x is none %}–{% elif k == "cant_guiding" %}{{ store.CANT_GUIDING[x] }}{% elif k == "saw_type" %}{{ store.SAW_TYPES[x] }}
+  {%- elif k == "edging_objective" %}{{ store.EDGING_OBJECTIVES[x] }}{% elif x is sameas true %}yes{% elif x is sameas false %}no{% else %}{{ x }}{% endif -%}
+{%- endmacro %}
+{% macro delta(a, b, scale=1, nd=2, unit="") -%}
+  {%- if a is not none and b is not none -%}{% set d = (b - a) * scale %}
+  <span style="color: {{ '#2f5d45' if d > 0.00001 else '#9b2c2c' if d < -0.00001 else 'inherit' }}">{{ "%+.*f"|format(nd, d) }}{{ unit }}</span>
+  {%- endif -%}
+{%- endmacro %}
+{% block content %}
+<h1>Compare two runs</h1>
+<form class="panel no-print" method="get" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:end">
+  <label class="field">A <select name="a"><option value="">–</option>{% for r in runs %}<option value="{{ r.id }}" {{ "selected" if ra and r.id == ra.id }}>{{ r.name }}</option>{% endfor %}</select></label>
+  <label class="field">B <select name="b"><option value="">–</option>{% for r in runs %}<option value="{{ r.id }}" {{ "selected" if rb and r.id == rb.id }}>{{ r.name }}</option>{% endfor %}</select></label>
+  <button type="submit" class="secondary">Compare</button>
+  <span style="flex:1"></span><button type="button" class="secondary" onclick="print()">Print</button>
+</form>
+
+{% if ra and rb and not rows %}
+  <div class="panel" id="waiting" data-runs="{{ ra.id }},{{ rb.id }}">
+    <p>Sawing… this page shows the comparison as soon as both runs finish.</p>
+    {% for r in (ra, rb) %}<p>{{ r.name }}: <span class="progress"><span id="bar{{ r.id }}" style="width:0%"></span></span> <span id="st{{ r.id }}">{{ r.status }}</span></p>{% endfor %}
+  </div>
+{% elif rows %}
+  <p class="help">A: “{{ ra.name }}” · B: “{{ rb.name }}”. Differences are B minus A.</p>
+  <table class="data">
+    <thead><tr><th>Class</th><th class="text">Pattern</th><th>Logs</th>
+      <th>Dry recovery A</th><th>B</th><th>B − A<span class="unit">points</span></th>
+      <th>Nett value A<span class="unit">R/m³</span></th><th>B</th><th>B − A</th>
+      <th>Boards per log A</th><th>B</th><th>B − A</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% set a, b = r.a, r.b %}{% set any = a or b %}
+      <tr><td>{{ any.rp.class_no }}</td><td class="text"><code>{{ any.rp.primary }}</code> <code>{{ any.rp.secondary }}</code></td>
+        <td>{{ a.logs if a else "" }}{{ " / " ~ b.logs if b and a and a.logs != b.logs else (b.logs if b and not a else "") }}</td>
+        <td>{{ a.dry_recovery|pct if a }}</td><td>{{ b.dry_recovery|pct if b }}</td>
+        <td>{{ delta(a.dry_recovery if a else none, b.dry_recovery if b else none, 100) }}</td>
+        <td>{{ a.nett_value|num if a }}</td><td>{{ b.nett_value|num if b }}</td>
+        <td>{{ delta(a.nett_value if a else none, b.nett_value if b else none) }}</td>
+        <td>{{ a.boards_per_log|num(1) if a }}</td><td>{{ b.boards_per_log|num(1) if b }}</td>
+        <td>{{ delta(a.boards_per_log if a else none, b.boards_per_log if b else none, 1, 1) }}</td></tr>
+    {% endfor %}
+    {% set ta, tb = totals %}
+    {% if ta and tb %}
+      <tr class="total"><td></td><td class="text">All patterns</td><td>{{ ta.logs }}</td>
+        <td>{{ ta.dry_recovery|pct }}</td><td>{{ tb.dry_recovery|pct }}</td><td>{{ delta(ta.dry_recovery, tb.dry_recovery, 100) }}</td>
+        <td>{{ ta.nett_value|num }}</td><td>{{ tb.nett_value|num }}</td><td>{{ delta(ta.nett_value, tb.nett_value) }}</td>
+        <td>{{ ta.boards_per_log|num(1) }}</td><td>{{ tb.boards_per_log|num(1) }}</td><td>{{ delta(ta.boards_per_log, tb.boards_per_log, 1, 1) }}</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+  {% set la, lb = lines %}
+  {% if la and lb %}
+  <div class="panel" style="margin-top:1rem">
+    <h2 style="margin-top:0">Machine settings that differ</h2>
+    {% set diffs = [] %}
+    {% for k, label in labels.items() %}{% if la[0][k] != lb[0][k] %}{% set _ = diffs.append((k, label, la[0][k], lb[0][k])) %}{% endif %}{% endfor %}
+    {% if diffs %}
+    <table class="data"><thead><tr><th class="text">Setting</th><th class="text">A: {{ la[0].name }}</th><th class="text">B: {{ lb[0].name }}</th></tr></thead>
+      <tbody>{% for k, label, x, y in diffs %}<tr><td class="text">{{ label }}</td><td class="text">{{ val(k, x) }}</td><td class="text">{{ val(k, y) }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="help">None: the difference comes from the inputs (logs, products, settings) the two runs were given.</p>{% endif %}
+  </div>
+  {% endif %}
+{% else %}
+  <p>Choose two runs above, or start a comparison of two machine settings on the <a href="/d/{{ ds.id }}/runs">Batch runs</a> page.</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const w = document.getElementById("waiting");
+if (w) {
+  const ids = w.dataset.runs.split(",");
+  const poll = async () => {
+    let busy = false;
+    for (const id of ids) {
+      const r = await fetch(`/api/runs/${id}`).then(r => r.json());
+      document.getElementById("bar" + id).style.width = (r.total ? 100 * r.progress / r.total : 0) + "%";
+      document.getElementById("st" + id).textContent = `${r.status} · ${r.progress} / ${r.total} logs`;
+      if (["running", "queued"].includes(r.status)) busy = true;
+    }
+    if (busy) setTimeout(poll, 600); else location.reload();
+  };
+  poll();
+}
+</script>
+{% endblock %}

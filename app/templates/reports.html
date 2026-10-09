@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Reports</h1>
+{% if not cur %}
+  <p>No finished runs yet. Start one on the <a href="/d/{{ ds.id }}/runs">Batch runs</a> page.</p>
+{% else %}
+<form class="panel no-print" method="get" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:end">
+  <label class="field">Run
+    <select name="run" onchange="this.form.submit()">{% for r in runs %}<option value="{{ r.id }}" {{ "selected" if r.id == cur.id }}>{{ r.name }}</option>{% endfor %}</select></label>
+  <input type="hidden" name="view" value="{{ view }}">
+  {% if view == "boards" %}
+  <label class="field">Patterns
+    <select name="pattern" onchange="this.form.submit()"><option value="">All patterns combined</option>
+      {% for p in patterns %}<option value="{{ p.rp.id }}" {{ "selected" if pattern == p.rp.id }}>Class {{ p.rp.class_no }}: {{ p.rp.primary }} · {{ p.rp.secondary }}</option>{% endfor %}</select></label>
+  <label class="field">Lengths
+    <select name="lengths" onchange="this.form.submit()">{% for k, l in length_modes.items() %}<option value="{{ k }}" {{ "selected" if lengths == k }}>{{ l }}</option>{% endfor %}</select></label>
+  {% endif %}
+  <span style="flex:1"></span>
+  <a class="button secondary" href="/d/{{ ds.id }}/compare?a={{ cur.id }}">Compare with another run</a>
+  <button type="button" class="secondary" onclick="print()">Print</button>
+  <a class="button" href="/d/{{ ds.id }}/reports/{{ cur.id }}/excel">Excel</a>
+</form>
+<div class="tabs">
+  {% for key, label in [("oneliner", "One-liner"), ("boards", "Board report"), ("summary", "Summary")] %}
+    <a href="?run={{ cur.id }}&view={{ key }}" class="{{ 'active' if view == key }}">{{ label }}</a>{% endfor %}
+</div>
+<p class="help">{{ ds.name }} · run “{{ cur.name }}” · {{ cur.created_at.strftime("%Y-%m-%d %H:%M") if cur.created_at }} ·
+  {{ "results calculated by Simsaw 6" if cur.source == "simsaw" else "calculated by this app" }}{% if cur.status == "cancelled" %} · <strong>cancelled before the end</strong>{% endif %}</p>
+
+{% if view == "oneliner" %}
+<table class="data">
+  <thead><tr><th class="text">Line</th><th>Class</th><th>SED<span class="unit">cm</span></th><th>No</th><th class="text">Primary</th><th class="text">Secondary</th>
+    <th>Logs</th><th>Dry recovery</th><th>Wet recovery</th><th>Gross value<span class="unit">R/m³ log</span></th><th>Nett value<span class="unit">R/m³ log</span></th>
+    <th>Boards</th><th>Per log</th><th>Average length<span class="unit">m</span></th></tr></thead>
+  <tbody>
+  {% for p in patterns %}
+    <tr><td class="text">{{ p.rp.line_name }}</td><td>{{ p.rp.class_no }}</td><td>{{ p.rp.diameter_range }}</td><td>{{ p.rp.pattern_no }}</td>
+      <td class="text"><code>{{ p.rp.primary }}</code></td><td class="text"><code>{{ p.rp.secondary }}</code></td>
+      {% if p.rp.error %}<td colspan="8" class="text error">Not sawn: {{ p.rp.error }}</td>{% else %}
+      <td>{{ p.logs }}</td><td><strong>{{ p.dry_recovery|pct }}</strong></td><td>{{ p.wet_recovery|pct }}</td>
+      <td>{{ p.gross_value|num }}</td><td>{{ p.nett_value|num }}</td><td>{{ p.boards }}</td><td>{{ p.boards_per_log|num(1) }}</td>
+      <td>{{ p.average_length|num(2) }}</td>{% endif %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="help">Recovery is board volume over log volume. Gross value is board value per m³ of log; nett value adds residues and deducts the log price.</p>
+
+{% elif view == "boards" %}
+{% for p, rows in board_rows %}
+{% set graded = rows|selectattr("grade")|list|length > 0 %}
+<table class="data">
+  <thead><tr><th>Thickness<span class="unit">mm</span></th><th>Width<span class="unit">mm</span></th>{% if lengths != "none" %}<th class="text">Length{% if lengths == "detailed" %}<span class="unit">m</span>{% endif %}</th>{% endif %}
+    {% if graded %}<th class="text">Grade</th>{% endif %}<th>Pieces</th><th>Dry volume<span class="unit">m³</span></th><th>Wet volume<span class="unit">m³</span></th><th>Value<span class="unit">R</span></th><th>Share of sawn</th><th>Share of log</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td>{{ r.thickness|num(0) }}</td><td>{{ r.width|num(0) }}</td>{% if lengths != "none" %}<td class="text">{{ r.length }}</td>{% endif %}
+      {% if graded %}<td class="text">{{ r.grade }}</td>{% endif %}<td>{{ r.pieces }}</td><td>{{ r.dry_volume|num(4) }}</td><td>{{ r.wet_volume|num(4) }}</td><td>{{ r.value|num }}</td>
+      <td>{{ r.share_sawn|pct }}</td><td>{{ r.share_log|pct }}</td></tr>
+  {% endfor %}
+    <tr class="total"><td class="text" colspan="{{ (3 if lengths != 'none' else 2) + (1 if graded else 0) }}">Total</td>
+      <td>{{ rows|sum(attribute="pieces") }}</td><td>{{ rows|sum(attribute="dry_volume")|num(4) }}</td>
+      <td>{{ rows|sum(attribute="wet_volume")|num(4) }}</td><td>{{ rows|sum(attribute="value")|num }}</td>
+      <td>{{ rows|sum(attribute="share_sawn")|pct }}</td><td>{{ rows|sum(attribute="share_log")|pct }}</td></tr>
+  </tbody>
+</table>
+{% endfor %}
+
+{% elif view == "summary" %}
+<div class="row">
+{% for p, bal in balances %}
+  <div class="panel" style="flex: 0 1 26rem">
+    <h3 style="margin-top:0">{% if p.rp.class_no %}Class {{ p.rp.class_no }}: <code>{{ p.rp.primary }}</code> <code>{{ p.rp.secondary }}</code>{% else %}All patterns{% endif %}</h3>
+    <table class="data" style="width:100%">
+      <thead><tr><th class="text"></th><th>Volume<span class="unit">m³</span></th><th>Share of log</th></tr></thead>
+      <tbody>{% for name, v, share in bal %}<tr class="{{ 'total' if name in ('Logs', 'Total') }}"><td class="text">{{ name }}</td><td>{{ v|num(4) }}</td><td>{{ share|pct }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <dl class="kv" style="margin-top:.6rem">
+      <dt>Logs</dt><dd>{{ p.logs }}</dd><dt>Boards</dt><dd>{{ p.boards }} ({{ p.boards_per_log|num(1) }} per log)</dd>
+      <dt>Board value</dt><dd>{{ p.value|money }}</dd><dt>Gross value</dt><dd>{{ p.gross_value|money }} /m³</dd>
+      <dt>Nett value</dt><dd>{{ p.nett_value|money }} /m³</dd>
+    </dl>
+  </div>
+{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

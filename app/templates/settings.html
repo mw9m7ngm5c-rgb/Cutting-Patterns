@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Settings</h1>
+<form method="post" action="/d/{{ ds.id }}/settings">
+<div class="panel">
+  <h2 style="margin-top:0">Log volume</h2>
+  <p class="help">Log volume = π/4 × (D + ½ × L × taper)² × L. Each of D, L and taper can be the log's actual value or a nominal one.</p>
+  <div class="form-grid">
+    <label class="check"><input type="checkbox" name="use_nominal_diameter" {{ "checked" if st.use_nominal_diameter }}> Nominal diameter</label>
+    <label class="field">Rounded to
+      <select name="nominal_diameter">{% for v, l in store.NOMINAL_DIAMETER.items() %}<option value="{{ v }}" {{ "selected" if st.nominal_diameter == v }}>{{ l }}</option>{% endfor %}</select></label>
+    <label class="check"><input type="checkbox" name="use_nominal_length" {{ "checked" if st.use_nominal_length }}> Nominal length</label>
+    <label class="field">Rounded down to a step of <span class="unit">m</span><input name="nominal_length_incr_m" value="{{ st.nominal_length_incr_m }}"></label>
+    <label class="check"><input type="checkbox" name="use_nominal_taper" {{ "checked" if st.use_nominal_taper }}> Nominal taper</label>
+    <label class="field">Nominal taper <span class="unit">mm/m</span><input name="nominal_taper_mm_per_m" value="{{ st.nominal_taper_mm_per_m }}"></label>
+  </div>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Log model</h2>
+  <div class="form-grid">
+    <label class="field">Disc separation <span class="unit">cm (Simsaw default 10; Ngomi uses 5)</span><input name="disc_separation_cm" value="{{ st.disc_separation_cm }}"></label>
+    <label class="field">Points per disc <span class="unit">used when discs are polygons</span><input name="points_per_disc" value="{{ st.points_per_disc }}"></label>
+    <label class="check"><input type="checkbox" name="discretised" {{ "checked" if st.discretised }}> Store discs as polygons (otherwise exact ellipses)</label>
+    <label class="field">Random seed <span class="unit">for board grades and real-log variation</span><input name="seed" value="{{ st.seed }}"></label>
+  </div>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Sawing</h2>
+  <div class="form-grid">
+    <label class="check"><input type="checkbox" name="arris_small_end" {{ "checked" if st.arris_small_end }}>
+      Arris alignment judged on the small end only (otherwise along the whole log)</label>
+  </div>
+  <p class="help">Arris alignment applies to secondary patterns with a comma, such as <code>25 3*38,25</code>: the stack is moved so
+    the blade at the comma sits where the cant's sawn faces run out of wood.</p>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Real-log variation</h2>
+  <p class="help">Ideal logs are smooth: straight taper, a perfect ellipse, a single even sweep. Real logs are not. Switch this on to
+    saw every log with random irregularities of the sizes below. Each log keeps the same shape every time it is sawn (drawn from the
+    seed and its log number), so runs stay comparable. Used by batch runs, the sawing-pattern screen and the generator.</p>
+  <div class="form-grid">
+    <label class="check"><input type="checkbox" name="real_logs" {{ "checked" if st.real_logs }}> Saw logs with real-log variation</label>
+    <label class="field">Out-of-roundness <span class="unit">% of radius (typical 2–5)</span><input name="diameter_variation" value="{{ st.diameter_variation }}" inputmode="decimal"></label>
+    <label class="field">Irregular taper <span class="unit">% of diameter along the log (typical 1–3)</span><input name="taper_variation" value="{{ st.taper_variation }}" inputmode="decimal"></label>
+    <label class="field">Crook <span class="unit">mm of centreline wander (typical 3–10)</span><input name="sweep_variation" value="{{ st.sweep_variation }}" inputmode="decimal"></label>
+    <label class="field">Uneven ovality <span class="unit">% of ovality (typical 2–5)</span><input name="ovality_variation" value="{{ st.ovality_variation }}" inputmode="decimal"></label>
+  </div>
+  <p class="help">The typical ranges are a starting point, not measured at Ngome; see docs/ASSUMPTIONS.md A-55.</p>
+</div>
+<button type="submit">Save settings</button>
+</form>
+{% endblock %}

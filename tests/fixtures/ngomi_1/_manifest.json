@@ -1,0 +1,628 @@
+{
+ "source": "ngomi 1.mdb",
+ "tables": {
+  "board_grades": {
+   "rows": 1,
+   "columns": [
+    "grade_uid",
+    "grade_no",
+    "zero_percent",
+    "fifty_percent",
+    "nine_nine_percent",
+    "one_hundred_percent",
+    "worst_single_face",
+    "combined_faces",
+    "worst_edge",
+    "combined_edges",
+    "all_surfaces",
+    "grade"
+   ]
+  },
+  "branches": {
+   "rows": 0,
+   "columns": [
+    "branch_uid",
+    "whorl_uid",
+    "branch_no",
+    "inclination_angle_deg",
+    "position_deg",
+    "diameter_mm",
+    "end_distance_mm",
+    "dead_length_mm"
+   ]
+  },
+  "centre_boards": {
+   "rows": 0,
+   "columns": [
+    "thickness_uid",
+    "width_uid"
+   ]
+  },
+  "combinations": {
+   "rows": 16,
+   "columns": [
+    "thickness_uid",
+    "width_uid",
+    "length_uid",
+    "grade_uid",
+    "valid_combination",
+    "unit_price"
+   ]
+  },
+  "generators": {
+   "rows": 1,
+   "columns": [
+    "generator_uid",
+    "generator_no",
+    "min_diameter",
+    "max_diameter",
+    "diameter_distr",
+    "min_length",
+    "max_length",
+    "length_incr",
+    "length_distr",
+    "min_taper",
+    "max_taper",
+    "taper_distr",
+    "min_sweep",
+    "max_sweep",
+    "sweep_distr",
+    "min_ovality",
+    "max_ovality",
+    "ovality_distr",
+    "min_defect_core",
+    "max_defect_core",
+    "defect_core_distr",
+    "log_grade_uid",
+    "no_of_logs",
+    "reset_seed",
+    "seed",
+    "real_logs",
+    "data_source",
+    "diameter_variation",
+    "taper_variation",
+    "sweep_variation",
+    "ovality_variation",
+    "no_of_discs",
+    "points_per_disc",
+    "file_name"
+   ]
+  },
+  "grade_outputs": {
+   "rows": 16,
+   "columns": [
+    "thickness_uid",
+    "width_uid",
+    "log_grade_uid",
+    "board_grade_uid",
+    "zero_percent",
+    "fifty_percent",
+    "nine_nine_percent",
+    "one_hundred_percent"
+   ]
+  },
+  "knot_whorls": {
+   "rows": 0,
+   "columns": [
+    "whorl_uid",
+    "log_uid",
+    "whorl_no",
+    "z_value",
+    "origin_x",
+    "origin_y"
+   ]
+  },
+  "lengths": {
+   "rows": 1,
+   "columns": [
+    "length_uid",
+    "min_length",
+    "max_length",
+    "length_incr",
+    "description"
+   ]
+  },
+  "log_class_grades": {
+   "rows": 5,
+   "columns": [
+    "log_class_uid",
+    "grade_uid"
+   ]
+  },
+  "log_classes": {
+   "rows": 5,
+   "columns": [
+    "log_class_uid",
+    "log_class_no",
+    "min_diameter",
+    "max_diameter",
+    "min_length",
+    "max_length",
+    "length_incr",
+    "min_taper",
+    "max_taper",
+    "min_sweep",
+    "max_sweep",
+    "min_ovality",
+    "max_ovality",
+    "min_defect_core",
+    "max_defect_core",
+    "log_price",
+    "parent_uid",
+    "no_of_logs",
+    "grade"
+   ]
+  },
+  "log_discs": {
+   "rows": 0,
+   "columns": [
+    "disc_uid",
+    "log_uid",
+    "disc_no",
+    "z_value"
+   ]
+  },
+  "log_grades": {
+   "rows": 1,
+   "columns": [
+    "grade_uid",
+    "grade_no",
+    "grade"
+   ]
+  },
+  "log_pith": {
+   "rows": 0,
+   "columns": [
+    "pith_uid",
+    "log_uid",
+    "z_value",
+    "x_value",
+    "y_value"
+   ]
+  },
+  "log_points": {
+   "rows": 0,
+   "columns": [
+    "point_uid",
+    "disc_uid",
+    "point_no",
+    "x",
+    "y"
+   ]
+  },
+  "logs": {
+   "rows": 200,
+   "columns": [
+    "log_uid",
+    "log_no",
+    "diameter",
+    "length",
+    "taper",
+    "sweep",
+    "ovality",
+    "defect_core",
+    "grade_uid",
+    "real_log"
+   ]
+  },
+  "misc_doubles": {
+   "rows": 6,
+   "columns": [
+    "variable_value",
+    "variable_name"
+   ]
+  },
+  "misc_integers": {
+   "rows": 26,
+   "columns": [
+    "variable_value",
+    "variable_name"
+   ]
+  },
+  "oneliner_data": {
+   "rows": 3,
+   "columns": [
+    "some_uid",
+    "line_no",
+    "pattern_no",
+    "dry_vol_recovery",
+    "wet_vol_recovery",
+    "gross_value_recovery",
+    "nett_value_recovery",
+    "board_count",
+    "average_length",
+    "class_no",
+    "diameter_range",
+    "length_range",
+    "prod_line_name",
+    "primary",
+    "secondary"
+   ]
+  },
+  "production_line": {
+   "rows": 1,
+   "columns": [
+    "prod_line_uid",
+    "prod_line_no",
+    "saw_type_uid",
+    "no_of_primary_kerfs",
+    "inside_primary_kerf",
+    "outside_primary_kerf",
+    "primary_outside_blades",
+    "primary_resaw",
+    "primary_resaw_kerf",
+    "no_of_second_kerfs",
+    "inside_second_kerf",
+    "outside_second_kerf",
+    "second_outside_blades",
+    "second_resaw",
+    "second_resaw_kerf",
+    "log_rotation_min",
+    "log_rotation_max",
+    "log_rotation_incr",
+    "log_alignment_min",
+    "log_alignment_max",
+    "log_alignment_incr",
+    "cant_alignment_min",
+    "cant_alignment_max",
+    "cant_alignment_incr",
+    "primary_offset_min",
+    "primary_offset_max",
+    "primary_offset_incr",
+    "second_offset_min",
+    "second_offset_max",
+    "second_offset_incr",
+    "cant_guiding",
+    "max_sweep",
+    "edging_objective",
+    "no_of_edging_blades",
+    "edger_kerf",
+    "max_boards_per_length",
+    "combinations",
+    "name",
+    "second_board_width"
+   ]
+  },
+  "run_board_grades": {
+   "rows": 1,
+   "columns": [
+    "grade_uid",
+    "run_uid",
+    "grade_no",
+    "worst_single_face",
+    "combined_faces",
+    "worst_edge",
+    "combined_edges",
+    "all_surfaces",
+    "grade"
+   ]
+  },
+  "run_board_results": {
+   "rows": 730,
+   "columns": [
+    "board_uid",
+    "saw_pattern_uid",
+    "log_uid",
+    "board_type",
+    "board_no",
+    "cant_no",
+    "thickness_uid",
+    "width_uid",
+    "length_uid",
+    "grade_uid",
+    "board_left",
+    "board_right",
+    "board_width",
+    "board_top",
+    "board_bottom",
+    "board_height",
+    "board_front",
+    "board_back",
+    "board_length",
+    "resawn",
+    "resaw_position",
+    "edging_face",
+    "dry_volume",
+    "wet_volume",
+    "board_value",
+    "knot_ratio_worst_single_face",
+    "knot_ratio_worst_combined_faces",
+    "knot_ratio_worst_edge",
+    "knot_ratio_worst_combined_edges",
+    "knot_ratio_worst_all_surfaces"
+   ]
+  },
+  "run_combinations": {
+   "rows": 13,
+   "columns": [
+    "thickness_uid",
+    "width_uid",
+    "length_uid",
+    "grade_uid",
+    "valid_combination",
+    "unit_price"
+   ]
+  },
+  "run_generators": {
+   "rows": 1,
+   "columns": [
+    "generator_uid",
+    "run_uid",
+    "generator_no",
+    "min_diameter",
+    "max_diameter",
+    "diameter_distr",
+    "min_length",
+    "max_length",
+    "length_incr",
+    "length_distr",
+    "min_taper",
+    "max_taper",
+    "taper_distr",
+    "min_sweep",
+    "max_sweep",
+    "sweep_distr",
+    "min_ovality",
+    "max_ovality",
+    "ovality_distr",
+    "min_defect_core",
+    "max_defect_core",
+    "defect_core_distr",
+    "no_of_logs",
+    "reset_seed",
+    "seed",
+    "real_logs",
+    "data_source",
+    "file_name"
+   ]
+  },
+  "run_grade_outputs": {
+   "rows": 16,
+   "columns": [
+    "thickness_uid",
+    "width_uid",
+    "log_grade_uid",
+    "board_grade_uid",
+    "zero_percent",
+    "fifty_percent",
+    "nine_nine_percent",
+    "one_hundred_percent"
+   ]
+  },
+  "run_lengths": {
+   "rows": 1,
+   "columns": [
+    "length_uid",
+    "run_uid",
+    "min_length",
+    "max_length",
+    "length_incr",
+    "description"
+   ]
+  },
+  "run_log_class_grades": {
+   "rows": 5,
+   "columns": [
+    "log_class_uid",
+    "grade_uid"
+   ]
+  },
+  "run_log_classes": {
+   "rows": 5,
+   "columns": [
+    "log_class_uid",
+    "run_uid",
+    "min_diameter",
+    "max_diameter",
+    "min_length",
+    "max_length",
+    "length_incr",
+    "min_taper",
+    "max_taper",
+    "min_sweep",
+    "max_sweep",
+    "min_ovality",
+    "max_ovality",
+    "min_defect_core",
+    "max_defect_core",
+    "log_price",
+    "parent_uid",
+    "no_of_logs",
+    "log_class_no"
+   ]
+  },
+  "run_log_grades": {
+   "rows": 1,
+   "columns": [
+    "grade_uid",
+    "run_uid",
+    "grade_no",
+    "grade"
+   ]
+  },
+  "run_log_results": {
+   "rows": 106,
+   "columns": [
+    "saw_pattern_uid",
+    "log_uid",
+    "no_of_boards_recov",
+    "dry_board_volume",
+    "wet_board_volume",
+    "board_value",
+    "sawdust_volume",
+    "sawdust_value",
+    "chip_volume",
+    "chip_value",
+    "log_volume"
+   ]
+  },
+  "run_logs": {
+   "rows": 70,
+   "columns": [
+    "log_uid",
+    "log_no",
+    "log_class_uid",
+    "diameter",
+    "length",
+    "taper",
+    "sweep",
+    "ovality",
+    "defect_core"
+   ]
+  },
+  "run_production_line": {
+   "rows": 1,
+   "columns": [
+    "prod_line_uid",
+    "prod_line_no",
+    "run_uid",
+    "saw_type_uid",
+    "no_of_primary_kerfs",
+    "inside_primary_kerf",
+    "outside_primary_kerf",
+    "primary_outside_blades",
+    "primary_resaw",
+    "primary_resaw_kerf",
+    "no_of_second_kerfs",
+    "inside_second_kerf",
+    "outside_second_kerf",
+    "second_outside_blades",
+    "second_resaw",
+    "second_resaw_kerf",
+    "log_rotation_min",
+    "log_rotation_max",
+    "log_rotation_incr",
+    "log_alignment_min",
+    "log_alignment_max",
+    "log_alignment_incr",
+    "cant_alignment_min",
+    "cant_alignment_max",
+    "cant_alignment_incr",
+    "primary_offset_min",
+    "primary_offset_max",
+    "primary_offset_incr",
+    "second_offset_min",
+    "second_offset_max",
+    "second_offset_incr",
+    "cant_guiding",
+    "max_sweep",
+    "edging_objective",
+    "no_of_edging_blades",
+    "edger_kerf",
+    "max_boards_per_length",
+    "name",
+    "second_board_width"
+   ]
+  },
+  "run_saw_pattern_groups": {
+   "rows": 1,
+   "columns": [
+    "group_uid",
+    "production_line_uid",
+    "group_name"
+   ]
+  },
+  "run_saw_patterns": {
+   "rows": 3,
+   "columns": [
+    "saw_pattern_uid",
+    "log_class_uid",
+    "pattern_no",
+    "group_uid",
+    "primary",
+    "secondary"
+   ]
+  },
+  "run_thicknesses": {
+   "rows": 4,
+   "columns": [
+    "thickness_uid",
+    "run_uid",
+    "dry_thickness",
+    "wet_thickness"
+   ]
+  },
+  "run_wane": {
+   "rows": 16,
+   "columns": [
+    "thickness_uid",
+    "width_uid",
+    "thickness_wane_perc",
+    "width_wane_perc",
+    "length_wane",
+    "length_wane_type"
+   ]
+  },
+  "run_widths": {
+   "rows": 4,
+   "columns": [
+    "width_uid",
+    "run_uid",
+    "dry_width",
+    "wet_width"
+   ]
+  },
+  "runs": {
+   "rows": 1,
+   "columns": [
+    "run_uid",
+    "run_date",
+    "real_logs",
+    "run_name"
+   ]
+  },
+  "saw_pattern_groups": {
+   "rows": 1,
+   "columns": [
+    "group_uid",
+    "production_line_uid",
+    "group_name"
+   ]
+  },
+  "saw_patterns": {
+   "rows": 3,
+   "columns": [
+    "saw_pattern_uid",
+    "log_class_uid",
+    "pattern_no",
+    "group_uid",
+    "primary",
+    "secondary"
+   ]
+  },
+  "saw_types": {
+   "rows": 4,
+   "columns": [
+    "saw_type_uid",
+    "saw_type_name"
+   ]
+  },
+  "thicknesses": {
+   "rows": 4,
+   "columns": [
+    "thickness_uid",
+    "dry_thickness",
+    "wet_thickness"
+   ]
+  },
+  "wane": {
+   "rows": 16,
+   "columns": [
+    "thickness_uid",
+    "width_uid",
+    "thickness_wane_perc",
+    "width_wane_perc",
+    "length_wane",
+    "length_wane_type"
+   ]
+  },
+  "widths": {
+   "rows": 4,
+   "columns": [
+    "width_uid",
+    "dry_width",
+    "wet_width"
+   ]
+  }
+ }
+}

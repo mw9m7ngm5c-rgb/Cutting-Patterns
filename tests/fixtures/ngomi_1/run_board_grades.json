@@ -1,0 +1,13 @@
+[
+ {
+  "grade_uid": 1,
+  "run_uid": 1,
+  "grade_no": 1,
+  "worst_single_face": null,
+  "combined_faces": null,
+  "worst_edge": null,
+  "combined_edges": null,
+  "all_surfaces": null,
+  "grade": "All board grades"
+ }
+]

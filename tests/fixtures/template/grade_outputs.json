@@ -1,0 +1,162 @@
+[
+ {
+  "thickness_uid": 1,
+  "width_uid": 1,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 2,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 3,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 1,
+  "width_uid": 4,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 1,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 2,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 3,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 2,
+  "width_uid": 4,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 1,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 2,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 3,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 3,
+  "width_uid": 4,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 1,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 2,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 3,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ },
+ {
+  "thickness_uid": 4,
+  "width_uid": 4,
+  "log_grade_uid": 1,
+  "board_grade_uid": 1,
+  "zero_percent": 100,
+  "fifty_percent": 100,
+  "nine_nine_percent": 100,
+  "one_hundred_percent": 100
+ }
+]

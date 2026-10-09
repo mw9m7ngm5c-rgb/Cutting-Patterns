@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% macro num(name, label, unit="", value=None, later=False) -%}
+  <label class="field">{{ label }} {% if unit %}<span class="unit">{{ unit }}</span>{% endif %}
+    <input name="{{ name }}" value="{{ cur[name] if value is none else value }}" inputmode="decimal">
+  </label>
+{%- endmacro %}
+{% macro opt_num(name, label, unit="") -%}
+  <label class="field">{{ label }} {% if unit %}<span class="unit">{{ unit }}</span>{% endif %}
+    <input name="{{ name }}" value="{{ '' if cur[name] is none else cur[name] }}" inputmode="decimal" placeholder="same as inside">
+  </label>
+{%- endmacro %}
+{% macro choice(name, label, options, later=False) -%}
+  <label class="field">{{ label }}
+    <select name="{{ name }}">{% for v, l in options.items() %}<option value="{{ v }}" {{ "selected" if cur[name] == v }}>{{ l }}</option>{% endfor %}</select>
+  </label>
+{%- endmacro %}
+{% macro flag(name, label) -%}
+  <input type="hidden" name="{{ name }}_present" value="1">
+  <label class="check"><input type="checkbox" name="{{ name }}" {{ "checked" if cur[name] }}> {{ label }}</label>
+{%- endmacro %}
+{% block content %}
+<h1>Machines</h1>
+<div class="row">
+  <div class="panel" style="flex: 0 0 16rem">
+    <h2 style="margin-top:0">Production lines</h2>
+    <ul class="pattern-list">
+      {% for ln in lines %}
+        <li class="{{ 'active' if cur and ln.id == cur.id }}" onclick="location='?line={{ ln.id }}&tab={{ tab }}'">
+          <strong>{{ ln.name }}</strong><small>{{ store.SAW_TYPES[ln.saw_type] }}</small></li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="/d/{{ ds.id }}/machines/new" class="inline-form" style="margin-top:.6rem">
+      <input name="name" placeholder="New line name" size="12" required><button type="submit" class="secondary">Add</button>
+    </form>
+  </div>
+  {% if cur %}
+  <div class="panel grow">
+    <div class="tabs">
+      {% for key, label in [("general", "Line"), ("primary", "Primary breakdown"), ("secondary", "Secondary breakdown"), ("edging", "Edging, cross-cut and resaw")] %}
+        <a href="?line={{ cur.id }}&tab={{ key }}" class="{{ 'active' if tab == key }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+    <form method="post" action="/d/{{ ds.id }}/machines/{{ cur.id }}">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      {% if tab == "general" %}
+        <div class="form-grid">
+          <label class="field">Name <input name="name" value="{{ cur.name }}" required></label>
+          {{ choice("saw_type", "Saw type", store.SAW_TYPES, later=True) }}
+          <label class="field">Primary machine
+            <select name="primary_machine">{% for v in store.PRIMARY_MACHINES %}<option value="{{ v }}" {{ "selected" if cur.primary_machine == v }}>{{ v or "–" }}</option>{% endfor %}</select></label>
+          <label class="field">Secondary machine
+            <select name="secondary_machine">{% for v in store.SECONDARY_MACHINES %}<option value="{{ v }}" {{ "selected" if cur.secondary_machine == v }}>{{ v or "–" }}</option>{% endfor %}</select></label>
+        </div>
+        <p class="help">The machine names are labels for your records. The kerfs and settings on the other tabs drive the simulation.</p>
+        <div style="margin-top:.6rem">{{ flag("kerfs_placeholder", "The kerfs on this line are placeholders, not measured values") }}</div>
+      {% elif tab == "primary" %}
+        <p class="help">Vertical cuts through the log. The cant is centred on the saw and sideboards step outward, one kerf apart.
+          Log rotation turns the log about its axis from horns up; log misalignment skews it end to end (the middle stays on the
+          saw line); the primary saw offset moves it sideways.</p>
+        <div class="form-grid">
+          {{ num("primary_kerf", "Kerf (inside blades)", "mm") }}
+          {{ opt_num("primary_outside_kerf", "Kerf (outside blades)", "mm") }}
+          {{ num("primary_outside_blades", "Outside blades per side", "") }}
+          {{ num("log_rotation_deg", "Log rotation", "degrees", later=True) }}
+          {{ num("log_misalignment_mm", "Log misalignment", "mm", later=True) }}
+          {{ num("primary_offset_mm", "Primary saw offset", "mm", later=True) }}
+        </div>
+      {% elif tab == "secondary" %}
+        <p class="help">The cant is turned and sawn into a stack of boards, centred on the saw, one kerf apart.
+          Cant guiding saws round the sweep: <em>half taper</em> follows the log's centreline, <em>full taper</em> follows the top face
+          of the cant so the taper all falls on the other side. Sweep beyond the largest the saw can follow is sawn straight.
+          Cant misalignment skews the cant end to end; the secondary saw offset moves the whole stack up.</p>
+        <div class="form-grid">
+          {{ num("secondary_kerf", "Kerf (inside blades)", "mm") }}
+          {{ opt_num("secondary_outside_kerf", "Kerf (outside blades)", "mm") }}
+          {{ num("secondary_outside_blades", "Outside blades per side", "") }}
+          {{ choice("cant_guiding", "Cant guiding (curve sawing)", store.CANT_GUIDING, later=True) }}
+          {{ num("max_sweep", "Largest sweep followed", "mm/m") }}
+          {{ num("cant_misalignment_mm", "Cant misalignment", "mm", later=True) }}
+          {{ num("secondary_offset_mm", "Secondary saw offset", "mm", later=True) }}
+        </div>
+      {% elif tab == "edging" %}
+        <div class="form-grid">
+          {{ choice("edging_objective", "Edge for", store.EDGING_OBJECTIVES) }}
+          {{ num("edger_blades", "Edger blades", "2 or 3") }}
+          {{ num("edger_kerf", "Edger kerf", "mm") }}
+          <label class="field">Second board width (3-blade edger) <span class="unit">"Best" or a dry width in mm</span>
+            <input name="second_board_width" value="{{ cur.second_board_width }}"></label>
+          {{ num("max_boards_per_flitch", "Most boards per flitch on cross-cut", "0 = off", later=True) }}
+        </div>
+        <h3>Resaw</h3>
+        <div class="form-grid">
+          <div>{{ flag("primary_resaw", "Resaw sideboards that cannot make their thickness") }}</div>
+          {{ num("primary_resaw_kerf", "Sideboard resaw kerf", "mm") }}
+          <div>{{ flag("secondary_resaw", "Resaw cant boards that cannot make their thickness") }}</div>
+          {{ num("secondary_resaw_kerf", "Cant board resaw kerf", "mm") }}
+        </div>
+      {% endif %}
+      <p style="margin-top:1rem"><button type="submit">Save</button></p>
+    </form>
+    <form method="post" action="/d/{{ ds.id }}/machines/{{ cur.id }}/duplicate" class="inline-form" style="margin-bottom:.6rem">
+      <button class="secondary" type="submit">Copy as a scenario</button>
+      <span class="help">A copy of these settings without patterns, to compare against on the Batch runs page.</span>
+    </form>
+    {% if lines|length > 1 %}
+    <form method="post" action="/d/{{ ds.id }}/machines/{{ cur.id }}/delete" onsubmit="return confirm('Delete {{ cur.name|e }} and its sawing patterns?')">
+      <button class="danger" type="submit">Delete this line</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

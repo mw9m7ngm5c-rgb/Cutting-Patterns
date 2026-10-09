@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% macro options(kind) %}
+  <h3>Products and constraints</h3>
+  <div class="form-grid">
+    <label class="field">Rank by
+      <select name="objective" class="objective">{% for k, l in objectives.items() %}<option value="{{ k.value }}">{{ l }}</option>{% endfor %}</select></label>
+    <label class="field">Target product <span class="unit">for "volume of a target product" and the minimum share</span>
+      <select name="target"><option value="">–</option>{% for t, w in products %}<option value="{{ t|int }}x{{ w|int }}">{{ t|int }} × {{ w|int }}</option>{% endfor %}</select></label>
+    <label class="field">Minimum share of the target <span class="unit">% of dry board volume</span><input name="min_share" value="0" inputmode="decimal"></label>
+    <label class="field">Most sideboards each side<input name="max_sideboards" value="2" inputmode="numeric"></label>
+    <label class="field">Most blades on the primary saw <span class="unit">blank = no limit</span><input name="max_primary_blades" inputmode="numeric"></label>
+    <label class="field">Most blades on the secondary saw <span class="unit">blank = no limit</span><input name="max_secondary_blades" inputmode="numeric"></label>
+    <label class="field">Most different thicknesses in a pattern<input name="max_thicknesses" value="3" inputmode="numeric"></label>
+    <label class="field">Log length <span class="unit">m, for diameters without logs (blank = median, {{ "%.1f"|format(length) }} m)</span><input name="length_m" inputmode="decimal"></label>
+    <label class="check"><input type="checkbox" name="symmetric" checked> Symmetric patterns only</label>
+    <label class="check"><input type="checkbox" name="thicker_to_centre" checked> Thicker boards towards the centre</label>
+    <label class="check"><input type="checkbox" name="real_logs" {{ "checked" if st.real_logs else "disabled" }}>
+      Saw on logs with real-log variation{% if not st.real_logs %} <span class="help">(switch it on under Settings)</span>{% endif %}</label>
+  </div>
+  <div class="row" style="margin-top:.8rem">
+    <fieldset class="grow"><legend>Cant widths to try</legend>
+      {% for w in widths %}<label class="check" style="display:inline-flex; margin-right:1rem"><input type="checkbox" name="cant_width" value="{{ w }}" checked> {{ w|int }}</label>{% endfor %}</fieldset>
+    <fieldset class="grow"><legend>Must yield</legend>
+      {% for t, w in products %}<label class="check" style="display:inline-flex; margin-right:.8rem"><input type="checkbox" name="must_include" value="{{ t|int }}x{{ w|int }}"> {{ t|int }}×{{ w|int }}</label>{% endfor %}</fieldset>
+    <fieldset class="grow"><legend>Never cut</legend>
+      {% for t, w in products %}<label class="check" style="display:inline-flex; margin-right:.8rem"><input type="checkbox" name="exclude" value="{{ t|int }}x{{ w|int }}"> {{ t|int }}×{{ w|int }}</label>{% endfor %}</fieldset>
+  </div>
+  <p class="help">Centre-board sizes are only ever cut at full cant width, as on the Products page. "Never cut" applies to the search;
+    a saved pattern is sawn with the dataset's own product list.</p>
+{% endmacro %}
+{% block content %}
+<h1>Pattern generator</h1>
+<div class="tabs">
+  {% for key, label in [("class", "Best patterns for a class"), ("chart", "Diameter chart"), ("history", "Earlier searches")] %}
+    <a href="?tab={{ key }}" class="{{ 'active' if tab == key }}">{{ label }}{% if key == "history" %} ({{ jobs|length }}){% endif %}</a>{% endfor %}
+</div>
+{% if not lines %}
+  <p>Add a production line on the <a href="/d/{{ ds.id }}/machines">Machines</a> page first.</p>
+{% elif tab == "class" %}
+<form class="panel" method="post" action="/d/{{ ds.id }}/generator">
+  <input type="hidden" name="kind" value="class">
+  <p class="help">Builds every cant-sawing pattern the options allow, checks them quickly on straight tapered logs, saws the best 120
+    on a sample of the class's logs and the best ten on every log. Usually under a minute.</p>
+  <div class="form-grid">
+    <label class="field">Production line
+      <select name="line_id">{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+    <label class="check"><input type="radio" name="mode" value="class" checked> A log class</label>
+    <label class="field">Log class
+      <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm ({{ counts.get(c.no, 0) }} logs)</option>{% endfor %}</select></label>
+    <label class="check"><input type="radio" name="mode" value="diameter"> One diameter</label>
+    <label class="field">Small-end diameter <span class="unit">cm; three ideal logs across the 1 cm step</span><input name="diameter_cm" value="{{ span[0] }}" inputmode="decimal"></label>
+    <label class="field">Candidates to saw on the sample<input name="simulate" value="120" inputmode="numeric"></label>
+  </div>
+  {{ options("class") }}
+  <p><button type="submit">Find the best patterns</button></p>
+</form>
+{% elif tab == "chart" %}
+<form class="panel" method="post" action="/d/{{ ds.id }}/generator">
+  <input type="hidden" name="kind" value="chart">
+  <p class="help">Runs the generator at every 1 cm of small-end diameter, on three ideal logs per step with the median taper, sweep,
+    ovality and length of this dataset's logs, and suggests log classes by grouping neighbouring diameters that share a best pattern.
+    Expect a few seconds per step.</p>
+  <div class="form-grid">
+    <label class="field">Production line
+      <select name="line_id">{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+    <label class="field">From <span class="unit">cm small-end diameter</span><input name="from_cm" value="{{ span[0] }}" inputmode="numeric"></label>
+    <label class="field">To <span class="unit">cm</span><input name="to_cm" value="{{ span[1] }}" inputmode="numeric"></label>
+    <label class="field">Candidates to saw per step<input name="simulate" value="24" inputmode="numeric"></label>
+  </div>
+  {{ options("chart") }}
+  <p><button type="submit">Draw the diameter chart</button></p>
+</form>
+{% else %}
+<div class="panel">
+  {% if jobs %}
+  <table class="data">
+    <thead><tr><th class="text">Search</th><th class="text">When</th><th class="text">Status</th><th class="text"></th></tr></thead>
+    <tbody>{% for j in jobs %}
+      <tr><td class="text"><a href="/d/{{ ds.id }}/generator/{{ j.id }}">{{ j.title }}</a></td>
+        <td class="text">{{ j.created_at.strftime("%Y-%m-%d %H:%M") if j.created_at }}</td><td class="text">{{ j.status }}</td>
+        <td class="text">{% if j.status not in ("running", "queued") %}<form class="inline-form" method="post" action="/d/{{ ds.id }}/generator/{{ j.id }}/delete"><button class="danger" type="submit">Delete</button></form>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<p>No searches yet.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

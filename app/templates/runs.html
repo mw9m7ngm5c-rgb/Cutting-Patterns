@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Batch runs</h1>
+<div class="panel">
+  <h2 style="margin-top:0">New run</h2>
+  <p class="help">Saws every pattern on every log in its class and keeps the results with a copy of the inputs used, so the
+    reports stay valid when you change the dataset later. {{ n_patterns }} pattern{{ "s" if n_patterns != 1 }} in this dataset.</p>
+  <form method="post" action="/d/{{ ds.id }}/runs">
+    <div class="form-grid">
+      <label class="field">Name <input name="name" value="{{ default_name }}" required></label>
+      <fieldset style="border:none; padding:0"><legend class="help">Production lines (none ticked = all)</legend>
+        {% for ln in lines %}<label class="check"><input type="checkbox" name="line_id" value="{{ ln.id }}"> {{ ln.name }}</label>{% endfor %}</fieldset>
+      <fieldset style="border:none; padding:0"><legend class="help">Log classes (none ticked = all)</legend>
+        {% for c in classes %}<label class="check"><input type="checkbox" name="class_id" value="{{ c.id }}"> {{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm</label>{% endfor %}</fieldset>
+    </div>
+    <label class="field" style="max-width: 28rem; margin-top:.6rem">Saw on the machine settings of
+      <select name="saw_on"><option value="">each pattern's own line</option>{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+    <p><button type="submit" {{ "disabled" if not n_patterns }}>Start run</button></p>
+  </form>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Compare two machine settings</h2>
+  <p class="help">Saws the same patterns twice, once on each line's settings (kerfs, curve sawing, misalignment, resaw, edger...),
+    and shows the difference pattern by pattern. To test a change, copy the line as a scenario on the Machines page and change the copy.</p>
+  <form method="post" action="/d/{{ ds.id }}/runs/compare">
+    <div class="form-grid">
+      <label class="field">Patterns of
+        <select name="patterns_line_id">{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+      <label class="field">Sawn on (A)
+        <select name="machine_a">{% for ln in lines %}<option value="{{ ln.id }}" {{ "selected" if loop.first }}>{{ ln.name }}</option>{% endfor %}</select></label>
+      <label class="field">and on (B)
+        <select name="machine_b">{% for ln in lines %}<option value="{{ ln.id }}" {{ "selected" if loop.index == 2 or lines|length == 1 }}>{{ ln.name }}</option>{% endfor %}</select></label>
+      <fieldset style="border:none; padding:0"><legend class="help">Log classes (none ticked = all)</legend>
+        {% for c in classes %}<label class="check"><input type="checkbox" name="class_id" value="{{ c.id }}"> {{ c.no }}: {{ "%.1f"|format(c.min_diameter_cm) }}–{{ "%.1f"|format(c.max_diameter_cm) }} cm</label>{% endfor %}</fieldset>
+    </div>
+    <p><button type="submit" {{ "disabled" if not n_patterns }}>Compare</button>
+      <a class="button secondary" href="/d/{{ ds.id }}/compare">Compare two earlier runs</a></p>
+  </form>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Runs</h2>
+  {% if runs %}
+  <table class="data">
+    <thead><tr><th class="text">Name</th><th class="text">When</th><th class="text">By</th><th class="text">Status</th><th class="text">Progress</th><th class="text"></th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr data-run="{{ r.id }}" data-status="{{ r.status }}">
+        <td class="text"><strong>{{ r.name }}</strong></td>
+        <td class="text">{{ r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at }}</td>
+        <td class="text">{{ "Simsaw 6" if r.source == "simsaw" else "This app" }}</td>
+        <td class="text status">{{ r.status }}{% if r.message %}<br><small class="help">{{ r.message.split("\n")[0] }}</small>{% endif %}</td>
+        <td class="text"><span class="progress"><span style="width: {{ (100 * r.progress / r.total) if r.total else 100 }}%"></span></span>
+          <span class="count">{{ r.progress }} / {{ r.total }} logs</span></td>
+        <td class="text">
+          {% if r.status in ("running", "queued") %}
+            <form class="inline-form" method="post" action="/d/{{ ds.id }}/runs/{{ r.id }}/cancel"><button class="danger" type="submit">Cancel</button></form>
+          {% else %}
+            <a class="button secondary" href="/d/{{ ds.id }}/reports?run={{ r.id }}">Reports</a>
+            <form class="inline-form" method="post" action="/d/{{ ds.id }}/runs/{{ r.id }}/delete" onsubmit="return confirm('Delete this run and its results?')">
+              <button class="danger" type="submit">Delete</button></form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>No runs yet.</p>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// follow running batches until they finish, then reload to show the report links
+const live = [...document.querySelectorAll('tr[data-status="running"], tr[data-status="queued"]')];
+if (live.length) {
+  const poll = async () => {
+    let finished = false;
+    for (const tr of live) {
+      const r = await fetch(`/api/runs/${tr.dataset.run}`).then(r => r.json());
+      tr.querySelector(".progress > span").style.width = (r.total ? 100 * r.progress / r.total : 0) + "%";
+      tr.querySelector(".count").textContent = `${r.progress} / ${r.total} logs`;
+      tr.querySelector(".status").textContent = r.status;
+      if (!["running", "queued"].includes(r.status)) finished = true;
+    }
+    if (finished) location.replace(location.pathname); else setTimeout(poll, 500);
+  };
+  poll();
+}
+</script>
+{% endblock %}

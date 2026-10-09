@@ -1,0 +1,14 @@
+[
+ {
+  "log_uid": 1,
+  "log_no": 1,
+  "diameter": 19.0,
+  "length": 3.5999999046325684,
+  "taper": 10.0,
+  "sweep": 10.0,
+  "ovality": 1.0,
+  "defect_core": 0.0,
+  "grade_uid": 1,
+  "real_log": false
+ }
+]

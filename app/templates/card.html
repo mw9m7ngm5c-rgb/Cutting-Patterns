@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Saw setting card · {{ card.primary }} {{ card.secondary }}{% endblock %}
+{% macro blades(rows) %}
+<table class="data card-table">
+  <thead><tr><th class="text">Blade</th><th>Cuts from<span class="unit">mm</span></th><th>to<span class="unit">mm</span></th>
+    <th class="text">then</th><th>up to<span class="unit">mm</span></th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td class="text">{{ r.blade }}</td><td>{{ "%+.1f"|format(r["from"]) }}</td><td>{{ "%+.1f"|format(r.to) }}</td>
+      <td class="text">{% if r.next == "cant" %}<strong>cant {{ r.dry|int }}</strong> ({{ r.wet }} wet){% elif r.next %}{{ r.dry|int }} mm {{ "flitch" if not card.cant else "board" }} ({{ r.wet }} wet){% else %}–{% endif %}</td>
+      <td>{{ "%+.1f"|format(r.next_to) if r.next_to is not none }}</td></tr>
+  {% endfor %}</tbody>
+</table>
+{% endmacro %}
+{% block content %}
+<div class="card">
+  <div class="no-print" style="margin-bottom:.8rem"><button type="button" onclick="print()">Print</button></div>
+  <header class="card-head">
+    <div>
+      <h1 style="margin:0">Saw setting card</h1>
+      <div class="card-pattern"><code>{{ card.primary }}</code> &nbsp; <code>{{ card.secondary }}</code></div>
+    </div>
+    <dl class="kv">
+      <dt>Dataset</dt><dd>{{ ds.name }}</dd>
+      <dt>Line</dt><dd>{{ card.line.name }}</dd>
+      <dt>Log class</dt><dd>{{ card.class.no }}: {{ "%.1f"|format(card.class.min_diameter_cm) }}–{{ "%.1f"|format(card.class.max_diameter_cm) }} cm SED</dd>
+      <dt>Printed</dt><dd>{{ today.isoformat() }}</dd>
+    </dl>
+  </header>
+  {% if card.problems %}
+    <div class="error">This pattern cannot be sawn on this line: {{ card.problems|join("; ") }}</div>
+  {% else %}
+  <div class="card-body">
+    <div class="card-left">
+      {% if card.diagram %}{{ svg.diagram(card.diagram) }}
+      <p class="help">Log {{ card.diagram.log.no }} ({{ card.diagram.log.sed_cm }} cm × {{ card.diagram.log.length_m }} m), the middle log of the class, seen from the small end.</p>{% endif %}
+      <h3>Expected per log</h3>
+      {% if card.result and not card.result.problems %}{% set r = card.result %}
+      <dl class="kv">
+        <dt>Boards</dt><dd><strong>{{ r.boards_per_log|num(1) }}</strong></dd>
+        <dt>Dry volume recovery</dt><dd><strong>{{ r.dry_recovery|pct }}</strong></dd>
+        <dt>Average board length</dt><dd>{{ r.average_length|num(2) }} m</dd>
+        <dt>Nett value</dt><dd>{{ r.nett_value|money }} /m³ log</dd>
+        <dt>Based on</dt><dd>{{ r.logs }} logs of the class</dd>
+      </dl>
+      <table class="data card-table" style="margin-top:.4rem">
+        <thead><tr><th class="text">Size</th><th>Pieces per log</th><th>Share</th></tr></thead>
+        <tbody>{% for x in r.mix %}<tr><td class="text">{{ x.thickness|int }} × {{ x.width|int }}</td><td>{{ (x.pieces / r.logs)|num(2) }}</td><td>{{ x.share|pct }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% else %}<p class="help">No logs in this class to work out what to expect.</p>{% endif %}
+    </div>
+    <div class="card-right">
+      <h3 style="margin-top:0">Primary saw</h3>
+      <p class="help">Distances across the log from the centreline, left to right, in wet sizes; each blade is {{ card.line.primary_kerf }} mm{% if card.line.primary_outside_kerf %} ({{ card.line.primary_outside_kerf }} mm on the outside blades){% endif %}.{% if not card.cant %} Live sawing: every flitch goes to the edger.{% endif %}</p>
+      {{ blades(card.primary_rows) }}
+      {% if card.secondary_rows %}
+      <h3>Secondary saw</h3>
+      <p class="help">Distances across the cant from its centreline, bottom to top, in wet sizes; each blade is {{ card.line.secondary_kerf }} mm{% if card.line.secondary_outside_kerf %} ({{ card.line.secondary_outside_kerf }} mm on the outside blades){% endif %}.
+        {% if card.line.cant_guiding %} Curve sawing: {{ store.CANT_GUIDING[card.line.cant_guiding]|lower }}.{% endif %}
+        {% if card.line.secondary_offset_mm %} Stack set {{ card.line.secondary_offset_mm }} mm high.{% endif %}
+        {% if "," in card.secondary %} The blade at the comma is set to the arris of each cant.{% endif %}</p>
+      {{ blades(card.secondary_rows) }}
+      {% endif %}
+      <h3>Machine settings</h3>
+      <dl class="kv">
+        <dt>Primary kerf</dt><dd>{{ card.line.primary_kerf }} mm{% if card.line.primary_outside_kerf %} ({{ card.line.primary_outside_kerf }} outside){% endif %}</dd>
+        <dt>Secondary kerf</dt><dd>{{ card.line.secondary_kerf }} mm{% if card.line.secondary_outside_kerf %} ({{ card.line.secondary_outside_kerf }} outside){% endif %}</dd>
+        <dt>Edger</dt><dd>{{ card.line.edger_blades }} blades, {{ card.line.edger_kerf }} mm kerf</dd>
+        <dt>Resaw</dt><dd>{% if card.line.primary_resaw or card.line.secondary_resaw %}{{ "sideboards" if card.line.primary_resaw }}{{ " and " if card.line.primary_resaw and card.line.secondary_resaw }}{{ "cant boards" if card.line.secondary_resaw }}{% else %}off{% endif %}</dd>
+      </dl>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

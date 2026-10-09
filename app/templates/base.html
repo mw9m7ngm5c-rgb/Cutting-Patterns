@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% if ds %}{{ ds.name }} · {% endif %}Sawing patterns{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top no-print">
+  <a class="brand" href="/">Sawing patterns</a>
+  {% if ds %}
+  <span class="ds-name" title="Current dataset">{{ ds.name }}</span>
+  <nav>
+    {% set items = [("overview", "", "Overview"), ("logs", "/logs", "Logs"), ("products", "/products", "Products"),
+                    ("machines", "/machines", "Machines"), ("patterns", "/patterns", "Sawing patterns"), ("generator", "/generator", "Generator"),
+                    ("runs", "/runs", "Batch runs"), ("reports", "/reports", "Reports"), ("settings", "/settings", "Settings")] %}
+    {% for key, path, label in items %}
+      <a href="/d/{{ ds.id }}{{ path }}" class="{{ 'active' if section == key }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+</header>
+{% if ds and placeholders %}
+<div class="banner placeholder no-print">
+  Placeholder values still in use: {{ placeholders | join(", ") }}. Results that depend on them are indicative only.
+</div>
+{% endif %}
+<main>
+  {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>
