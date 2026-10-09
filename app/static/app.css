@@ -159,3 +159,10 @@ svg.diagram.drop-target { outline: 3px dashed var(--accent); }
   .card .kv { gap: 0 .8rem; }
   .card { break-inside: avoid; }
 }
+
+/* sign-in */
+.user-box { display: flex; gap: .8rem; align-items: center; }
+.link-button { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; padding: .2rem .6rem; }
+.login-box { max-width: 24rem; margin: 4rem auto; }
+.login-box label.field { margin-bottom: .8rem; }
+.login-box input { width: 100%; }

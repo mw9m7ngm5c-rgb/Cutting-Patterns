@@ -20,6 +20,13 @@
     {% endfor %}
   </nav>
   {% endif %}
+  {% if user %}
+  <span style="flex:1"></span>
+  <span class="user-box">
+    <a href="/account" title="Your account">{{ user.username }}</a>
+    <form method="post" action="/logout" class="inline-form"><button type="submit" class="link-button">Sign out</button></form>
+  </span>
+  {% endif %}
 </header>
 {% if ds and placeholders %}
 <div class="banner placeholder no-print">

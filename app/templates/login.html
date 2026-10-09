@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Sawing patterns{% endblock %}
+{% block content %}
+<div class="panel login-box">
+  <h1>Sign in</h1>
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field">User name <input name="username" autocomplete="username" autofocus required></label>
+    <label class="field">Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Sign in</button>
+  </form>
+  <p class="help" style="margin-top:1rem">Forgotten your password? Ask the person who set up your account to give you a new one.</p>
+</div>
+{% endblock %}

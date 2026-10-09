@@ -376,3 +376,16 @@ class GeneratorJob(Base):
     total: Mapped[int] = mapped_column(Integer, default=0)
     message: Mapped[str] = mapped_column(Text, default="")
     result: Mapped[str] = mapped_column(Text, default="")               # JSON
+
+
+# ------------------------------------------------------------------ people who may sign in
+
+class User(Base):
+    """A person who may sign in. Once any user exists (or CP_REQUIRE_LOGIN is set), every page needs a login."""
+    __tablename__ = "app_user"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(300))
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+    last_login: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)

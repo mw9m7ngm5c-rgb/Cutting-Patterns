@@ -1,0 +1,19 @@
+# Render blueprint: one web service with a disk for the database. See docs/DEPLOY_CLOUD.md.
+services:
+  - type: web
+    name: cutting-patterns
+    runtime: docker
+    plan: starter            # a persistent disk needs a paid plan; the app must run as a single instance
+    autoDeploy: true         # redeploys when main changes
+    healthCheckPath: /healthz
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: CP_SECRET_KEY
+        generateValue: true
+      - key: CP_ADMIN_USER
+        sync: false          # Render asks for these when the blueprint is first applied
+      - key: CP_ADMIN_PASSWORD
+        sync: false

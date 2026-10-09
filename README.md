@@ -28,12 +28,15 @@ To run it for the whole office on a Mac (in the background, started at login, ba
 follow [docs/DEPLOY_MACOS.md](docs/DEPLOY_MACOS.md): in short `./deploy/macos/install.sh` then
 `./deploy/macos/start-at-login.sh --shared`.
 
+To run it on a cloud server, so you and colleagues can use it from any browser with a user name and
+password, follow [docs/DEPLOY_CLOUD.md](docs/DEPLOY_CLOUD.md) (Render, using `render.yaml` and the `Dockerfile`).
+
 Back up the database at any time (safe while the app runs): `.venv/bin/python -m app backup`.
 
 Tests and the engine command line:
 
 ```
-.venv/bin/python -m pytest                         # 232 tests
+.venv/bin/python -m pytest                         # 250 tests
 .venv/bin/python cli.py validate --dataset tests/fixtures/ngomi_1 --run Test1
 .venv/bin/python cli.py simulate --dataset tests/fixtures/ngomi_1 --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
 ```
@@ -49,4 +52,5 @@ Tests and the engine command line:
 - `docs/ASSUMPTIONS.md`: every rule that was inferred rather than read, with its evidence.
 - `tools/`: scripts behind the evidence in ASSUMPTIONS.
 - `deploy/macos/`: install, start-at-login, update, backup and stop scripts for a Mac.
+- `Dockerfile`, `render.yaml`: the cloud set-up.
 - `reference/`: read-only Simsaw source material. Not committed.
