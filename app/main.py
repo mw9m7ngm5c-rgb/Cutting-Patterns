@@ -246,9 +246,10 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             return page(request, "datasets.html", rows=rows, msg=msg, section="datasets")
 
     @app.post("/datasets/new")
-    def new_dataset(name: str = Form(...)):
+    def new_dataset(name: str = Form(...), start: str = Form("example")):
         with db.session() as s:
-            ds = store.create_default_dataset(s, name.strip() or "New dataset")
+            make = store.create_empty_dataset if start == "empty" else store.create_default_dataset
+            ds = make(s, name.strip() or "New dataset")
             s.commit()
             return RedirectResponse(f"/d/{ds.id}", 303)
 
@@ -303,7 +304,31 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                 pats = [p for p in e.patterns if p.log_class_no == lc.no]
                 classes.append({"c": lc, "logs": len(e.logs_in_class(lc.no)), "patterns": len(pats)})
             unclassed = sum(1 for g in e.logs if store.class_of(g, e.log_classes) is None)
-            return page(request, "overview.html", **c, e=e, classes=classes, unclassed=unclassed)
+            ph = c["placeholders"]
+            valid = sum(1 for x in e.products.combinations if x.valid)
+            runs_done = s.scalar(select(func.count()).select_from(m.Run).where(
+                m.Run.dataset_id == ds_id, m.Run.source != "simsaw", m.Run.status == "done"))
+            with_pattern = sum(1 for r in classes if r["patterns"])
+            n_cls, n_logs = len(e.log_classes), len(e.logs)
+            plural = lambda n, w: f"{n} {w}{'' if n == 1 else 'es' if w.endswith('s') else 's'}"
+            steps = [
+                ("logs", "Log classes", "the diameter ranges you sort logs into, with their log prices",
+                 bool(n_cls), plural(n_cls, "class") if n_cls else "none yet"),
+                ("logs", "Logs", "type, paste or generate the logs (diameter, length, taper, sweep, ovality); optional for "
+                 "the generator, needed for a batch run", bool(n_logs), f"{n_logs} logs" if n_logs else "none yet"),
+                ("products", "Products", "board sizes, which sizes you cut, their prices and wane rules",
+                 valid > 0, f"{valid} products" + (" · prices still placeholders" if any("product price" in x for x in ph) else "")
+                 if valid else "none yet"),
+                ("machines", "Saw line", "kerfs, resaws and the edger",
+                 bool(e.lines), ", ".join(ln.name for ln in e.lines) + (" · kerfs still placeholders" if any("kerfs" in x for x in ph) else "")
+                 if e.lines else "none yet"),
+                ("generator", "Best patterns", "the generator finds the best pattern and recovery for every class",
+                 n_cls > 0 and with_pattern == n_cls, f"{with_pattern} of {n_cls} classes have a pattern"),
+                ("runs", "Batch run", "saws every pattern on every log of its class for the full results",
+                 bool(runs_done), plural(runs_done, "run") if runs_done else "not yet"),
+                ("reports", "Reports", "recovery, boards and value per class, printable or as Excel", bool(runs_done), ""),
+            ]
+            return page(request, "overview.html", **c, e=e, classes=classes, unclassed=unclassed, steps=steps)
 
     # -------------------------------------------------------------- data entry pages
 
@@ -791,7 +816,7 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
         return [float(t), float(w)]
 
     @app.get("/d/{ds_id}/generator", response_class=HTMLResponse)
-    def generator_page(request: Request, ds_id: int, tab: str = "class", msg: str = ""):
+    def generator_page(request: Request, ds_id: int, tab: str = "classes", msg: str = ""):
         with db.session() as s:
             c = ctx(s, ds_id, "generator")
             e = store.engine_dataset(s, ds_id)
@@ -811,7 +836,7 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
     @app.post("/d/{ds_id}/generator")
     async def generator_start(request: Request, ds_id: int):
         f = await request.form()
-        kind = "chart" if f.get("kind") == "chart" else "class"
+        kind = f.get("kind") if f.get("kind") in ("chart", "classes") else "class"
         try:
             with db.session() as s:
                 dataset_or_404(s, ds_id)
@@ -833,7 +858,12 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                  "min_share": float(num("min_share") or 0) / 100.0,
                  "length_m": float(num("length_m")) if num("length_m") else None,
                  "real_logs": f.get("real_logs") == "on"}
-            if kind == "class":
+            if kind == "classes":
+                if not e.log_classes:
+                    raise ValueError("add log classes on the Logs page first")
+                p["simulate"] = int(num("simulate") or 80)
+                title = f"Every log class on {ln.name}"
+            elif kind == "class":
                 p["simulate"] = int(num("simulate") or 80)
                 if f.get("mode") == "diameter":
                     p["mode"], p["diameter_cm"] = "diameter", float(num("diameter_cm"))
@@ -877,7 +907,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             p = json.loads(job.params)
             result = json.loads(job.result) if job.result else None
             classes = s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id).order_by(m.LogClass.no)).all()
-            data = {"job": job, "p": p, "result": result, "classes": classes, "msg": msg}
+            data = {"job": job, "p": p, "result": result, "classes": classes, "msg": msg,
+                    "objective_label": G.OBJECTIVE_LABELS[G.Objective(p.get("objective", "volume"))]}
             if result and job.kind == "class" and result["ranked"]:
                 snap = snapshot.loads(job.snapshot)
                 if p.get("mode") == "diameter":
@@ -954,6 +985,43 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                                secondary=secondary, source="generated"))
             s.commit()
         return go(f"/d/{ds_id}/generator/{jid}", msg=f"Saved as pattern {n} of class {cl.no} on {ln.name}.")
+
+    @app.post("/d/{ds_id}/generator/{jid}/save-all")
+    def generator_save_all(ds_id: int, jid: int, replace: str = Form("")):
+        """Save the best pattern of every class from an all-classes search."""
+        with db.session() as s:
+            job = _job(s, ds_id, jid)
+            p = json.loads(job.params)
+            ln = s.get(m.ProductionLine, p["line_id"])
+            if job.kind != "classes" or not job.result or ln is None:
+                return go(f"/d/{ds_id}/generator/{jid}", msg="Nothing to save.")
+            by_no = {c.no: c for c in s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id))}
+            saved, missing = 0, []
+            for row in json.loads(job.result)["classes"]:
+                cl = by_no.get(row["no"])
+                if not row["ranked"]:
+                    continue
+                if cl is None:
+                    missing.append(str(row["no"]))
+                    continue
+                old = s.scalars(select(m.SawPattern).where(m.SawPattern.line_id == ln.id,
+                                                           m.SawPattern.log_class_id == cl.id)).all()
+                if replace:
+                    for sp in old:
+                        s.delete(sp)
+                    s.flush()
+                    n = 1
+                else:
+                    n = max((sp.pattern_no for sp in old), default=0) + 1
+                best = row["ranked"][0]
+                s.add(m.SawPattern(dataset_id=ds_id, line_id=ln.id, log_class_id=cl.id, pattern_no=n,
+                                   primary=best["primary"], secondary=best["secondary"], source="generated"))
+                saved += 1
+            s.commit()
+        msg = f"Best pattern saved for {saved} class{'es' if saved != 1 else ''} on {ln.name}."
+        if missing:
+            msg += f" Class {', '.join(missing)} no longer exists and was skipped."
+        return go(f"/d/{ds_id}/generator/{jid}", msg=msg + " Next: a batch run gives the recovery on every log.")
 
     @app.post("/d/{ds_id}/generator/{jid}/apply")
     def generator_apply(ds_id: int, jid: int, group: str = Form("n"), value: float = Form(...)):

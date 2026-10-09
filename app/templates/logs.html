@@ -6,13 +6,13 @@
 
 <h2>Logs</h2>
 <p class="help">SED is the small-end diameter. Sweep is stored as the total deviation of the centreline in mm and defect core as a diameter
-  in cm, as in Simsaw; the class limits use mm/m and % of SED.</p>
+  in cm; the class limits use mm/m and % of SED.</p>
 <div class="grid" data-url="/api/d/{{ ds.id }}/grid/logs" id="logs-grid"></div>
 
 <h2>Log generator</h2>
 <div class="panel">
   <p class="help">Draws ideal logs between the limits. Normal distributions are centred between the limits with the stated share of logs
-    inside them; the rest fall outside, as in Simsaw. With a fixed seed the same settings always give the same logs.</p>
+    inside them; the rest fall outside. With a fixed seed the same settings always give the same logs.</p>
   <form method="post" action="/d/{{ ds.id }}/logs/generate">
     <table class="data">
       <thead><tr><th class="text">Property</th><th>From</th><th>To</th><th class="text">Distribution</th></tr></thead>

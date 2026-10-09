@@ -194,18 +194,35 @@ PLACEHOLDER_PRICE = 4000.0
 PLACEHOLDER_LOG_PRICE = 120.0
 
 
+def create_empty_dataset(s: Session, name: str) -> m.Dataset:
+    """A dataset with nothing but the fixed parts every dataset needs (one log grade, one board grade,
+    one length range, default settings): the mill types in its own sizes, classes, logs and machines."""
+    ds = m.Dataset(name=name, source="New (empty)", notes="")
+    s.add(ds)
+    s.flush()
+    _fixed_parts(s, ds.id)
+    s.add(m.DatasetSettings(dataset_id=ds.id))
+    s.add(m.LogGenerator(dataset_id=ds.id))
+    s.flush()
+    return ds
+
+
+def _fixed_parts(s: Session, i: int) -> None:
+    s.add(m.LogGrade(dataset_id=i, no=1, name="All log grades"))
+    s.add(m.BoardGrade(dataset_id=i, no=1, name="All board grades"))
+    s.add(m.LengthClass(dataset_id=i, name="All", min_m=0.9, max_m=6.6, incr_m=0.3))
+
+
 def create_default_dataset(s: Session, name: str) -> m.Dataset:
-    ds = m.Dataset(name=name, source="New (Ngomi defaults)",
-                   notes="Sizes, classes, machine and settings copied from the Ngomi dataset. "
+    ds = m.Dataset(name=name, source="New (example values)",
+                   notes="Started from example sizes, log classes, a production line and settings. "
                          "Board prices, log prices and kerfs are placeholders until replaced.")
     s.add(ds)
     s.flush()
     i = ds.id
-    s.add(m.LogGrade(dataset_id=i, no=1, name="All log grades"))
-    s.add(m.BoardGrade(dataset_id=i, no=1, name="All board grades"))
+    _fixed_parts(s, i)
     s.add_all([m.Thickness(dataset_id=i, dry=d, wet=w) for d, w in NGOMI_THICKNESSES])
     s.add_all([m.Width(dataset_id=i, dry=d, wet=w) for d, w in NGOMI_WIDTHS])
-    s.add(m.LengthClass(dataset_id=i, name="All", min_m=0.9, max_m=6.6, incr_m=0.3))
     s.flush()
     sync_products(s, i)
     th = {t.id: t.dry for t in s.scalars(select(m.Thickness).where(m.Thickness.dataset_id == i))}
