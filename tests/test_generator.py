@@ -190,3 +190,11 @@ def test_an_idle_blade_never_wins_a_tie(products, line, settings):
     assert res[0].dry_recovery == pytest.approx(res[1].dry_recovery)
     a, b = (G._rank(c, 0, r, G.Objective.VOLUME, None) for c, r in zip((plain, extra), res))
     assert a.score > b.score
+
+
+def test_generator_on_a_fixed_blade_edger(ngomi):
+    import dataclasses
+    ds = ngomi
+    line = dataclasses.replace(ds.lines[0], edger_blades=3, edger_spacing=(160.0, 107.0))
+    res = G.generate(ds.logs_in_class(2)[:8], ds.products, line, ds.settings, 120.0, simulate=10, top=3)
+    assert res.ranked and all(r.result.board_count > 0 for r in res.ranked)

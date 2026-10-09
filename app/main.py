@@ -261,7 +261,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             lines = s.scalars(select(m.ProductionLine).where(m.ProductionLine.dataset_id == ds_id)
                               .order_by(m.ProductionLine.no)).all()
             cur = next((ln for ln in lines if ln.id == line), lines[0] if lines else None)
-            return page(request, "machines.html", **c, lines=lines, cur=cur, tab=tab, msg=msg)
+            widths = s.scalars(select(m.Width).where(m.Width.dataset_id == ds_id).order_by(m.Width.dry)).all()
+            return page(request, "machines.html", **c, lines=lines, cur=cur, tab=tab, msg=msg, widths=widths)
 
     @app.post("/d/{ds_id}/machines/new")
     def new_line(ds_id: int, name: str = Form(...)):
@@ -302,6 +303,22 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             for f in ("name", "primary_machine", "secondary_machine", "second_board_width"):
                 if f in form:
                     setattr(ln, f, str(form[f]).strip())
+            if "edger_spacing" in form:
+                problem = None
+                try:
+                    gaps = store.parse_spacing(str(form["edger_spacing"]))
+                except ValueError:
+                    gaps, problem = (), "Blade distances must be numbers above 0 in mm, such as 160 107."
+                if ln.edger_blades < 2:
+                    problem = "An edger needs at least 2 blades."
+                elif gaps and len(gaps) != ln.edger_blades - 1:
+                    problem = (f"{ln.edger_blades} blades have {ln.edger_blades - 1} gap"
+                               f"{'s' if ln.edger_blades != 2 else ''} between them: give {ln.edger_blades - 1} "
+                               f"distance{'s' if ln.edger_blades != 2 else ''}, or leave it empty for movable blades.")
+                if problem:
+                    s.rollback()
+                    return go(f"/d/{ds_id}/machines", line=line_id, tab=tab, msg=problem)
+                ln.edger_spacing = " ".join(f"{v:g}" for v in gaps)
             if kerfs() != before and "kerfs_placeholder_present" not in form:
                 ln.kerfs_placeholder = False      # a kerf typed in by the user is no longer a placeholder
             s.commit()
@@ -574,6 +591,7 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
         for ln in snap.lines:
             if ln.name in used:
                 d = dataclasses.asdict(ln)
+                d["edger_spacing"] = " + ".join(f"{v:g}" for v in ln.edger_spacing) or "movable"
                 d["saw_type"], d["cant_guiding"], d["edging_objective"] = (int(ln.saw_type), int(ln.cant_guiding),
                                                                           int(ln.edging_objective))
                 out.append(d)

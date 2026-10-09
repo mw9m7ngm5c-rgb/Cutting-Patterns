@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from . import notation
-from .edging import Choice, best_board
+from .edging import Choice, best_board, fixed_edger
 from .log import build_core_sections, build_sections, log_rng, log_volume_m3
 from .model import (Board, CantGuiding, Log, LogResult, PatternResult, Products, ProductionLine,
                     Rules, SawType, Settings, Size)
@@ -274,20 +274,61 @@ def _cut_flitch(fl: Flitch, lay: Layout, sec: Sections, cant: Sections, products
                 best = c
         return best, best is not None
 
+    def pieces_for(t: Size) -> list[tuple[float, Size | None]]:
+        """Fixed-spacing edger: what each gap between neighbouring blades makes from a flitch of thickness
+        t: the widest valid product whose wet width fits the gap; the board is the gap's full width."""
+        out, off = [], 0.0
+        allowed = candidates(t)
+        for gap in line.edger_spacing:
+            fit = [w for w in allowed if w.wet <= gap + 0.5]
+            w = max(fit, key=lambda x: x.wet) if fit else None
+            out.append((off, Size(w.dry, float(gap)) if w is not None else None))
+            off += gap + line.edger_kerf
+        return out
+
+    def fixed(ch, cache=None) -> tuple[list[Choice], bool]:
+        def edge(t: Size, lo: float, hi: float) -> list[Choice]:
+            boards = fixed_edger(ch, z, lo, hi, t, pieces_for(t), products, line.edging_objective, rules, cache)
+            if fl.on_cant:      # a cant board taken at full cant width needs no edger
+                full = [w for w in candidates(t) if abs(w.wet - lay.cant.wet) < 1e-6]
+                whole = best_board(ch, z, lo, hi, t, full, products, line.edging_objective, rules,
+                                   cache=cache) if full else None
+                if whole is not None and whole.score[0] >= _total(boards):
+                    return [whole]
+            return boards
+        boards = edge(fl.thickness, fl.lo, fl.hi)
+        if boards or not resaw:
+            return boards, False
+        inner_is_lo = abs(fl.lo) <= abs(fl.hi)
+        best: list[Choice] = []
+        for t in _thinner(products, fl.thickness):
+            lo, hi = (fl.lo, fl.lo + t.wet) if inner_is_lo else (fl.hi - t.wet, fl.hi)
+            got = edge(t, lo, hi)
+            if got and _total(got) > _total(best):
+                best = got
+        return best, bool(best)
+
+    def movable(ch, cache=None) -> tuple[list[Choice], bool]:
+        first, resawn = one(ch, cache=cache)
+        if first is None:
+            return [], False
+        full_width = fl.on_cant and abs(first.width.wet - lay.cant.wet) < 1e-6
+        if line.edger_blades >= 3 and not fl.knives and not full_width:
+            # more blades: further boards side by side, one edger kerf apart (A-58)
+            row = _side_by_side(first, ch, z, u_lo, u_hi, products, line, rules, candidates, cache,
+                                line.edger_blades - 1)
+            if row is not None:
+                return row, resawn
+        return [first], resawn
+
+    cut_once = fixed if line.edger_spacing and not fl.knives else movable
     ladders: dict = {}                     # depth ladders on the unmasked chord, shared by every call below
-    first, resawn = one(chord, cache=ladders)
-    if first is None:
+    boards, resawn = cut_once(chord, cache=ladders)
+    if not boards:
         return []
-    cuts = [Cut(fl, first, resawn)]
+    cuts = [Cut(fl, c, resawn, i) for i, c in enumerate(sorted(boards, key=lambda c: c.u0))]
 
-    # three-blade edger: a second board from the offcut beside the first (A-58)
-    full_width = fl.on_cant and abs(first.width.wet - lay.cant.wet) < 1e-6
-    if line.edger_blades >= 3 and not fl.knives and not full_width:
-        second = _second_board(fl, first, chord, z, u_lo, u_hi, products, line, rules, candidates, ladders)
-        if second is not None:
-            cuts = [Cut(fl, second[0], resawn), Cut(fl, second[1], resawn, 1)]
-
-    # cross-cut: further boards from the length the first one left (A-59)
+    # cross-cut: further boards from the length the first ones left (A-59)
     if line.max_boards_per_flitch > 1:
         used = np.zeros(len(z), dtype=bool)
         for c in cuts:
@@ -300,21 +341,23 @@ def _cut_flitch(fl: Flitch, lay: Layout, sec: Sections, cant: Sections, products
             edges = np.flatnonzero(np.diff(used.astype(int)) != 0)
             free[edges] = True
             free[np.minimum(edges + 1, len(z) - 1)] = True
-            c, rs = one(_masked(chord, free))
-            if c is None:
+            more, rs = cut_once(_masked(chord, free))
+            if not more:
                 break
-            cuts.append(Cut(fl, c, rs, piece))
-            used[c.first:np.searchsorted(z, z[c.first] + c.length_mm, side="right")] = True
-            piece += 1
+            for c in sorted(more, key=lambda c: c.u0):
+                cuts.append(Cut(fl, c, rs, piece))
+                used[c.first:np.searchsorted(z, z[c.first] + c.length_mm, side="right")] = True
+                piece += 1
     return cuts
 
 
-def _second_board(fl, first: Choice, chord, z, u_lo, u_hi, products, line, rules, candidates, cache=None):
-    """Best pair of boards side by side with the edger's middle blade between them, or None.
+def _side_by_side(first: Choice, chord, z, u_lo, u_hi, products, line, rules, candidates, cache, n_boards: int):
+    """Best row of up to n_boards boards side by side, one edger kerf apart, or None.
 
-    A three-blade edger has two outside saws and one between the boards, so the second board lies
-    exactly one kerf from the first. The first board is pushed to one end of the room it has (low or
-    high) to leave the most for the second; the pair is kept only if it beats the single board."""
+    The edger's blades move to suit the flitch, but neighbouring boards share a blade, so each further
+    board lies exactly one kerf from the last. The first board is pushed to one end of the room it has
+    (low or high) to leave the most for the others; each further board is the best that fits next.
+    The row is kept only if it beats the single board."""
     k = line.edger_kerf
     t = first.thickness
     if line.second_board_width.strip().lower() in ("", "best"):
@@ -325,10 +368,10 @@ def _second_board(fl, first: Choice, chord, z, u_lo, u_hi, products, line, rules
             widths2 = [w2] if any(abs(w.dry - w2.dry) < 1e-6 for w in candidates(t)) else []
         except (KeyError, ValueError):
             widths2 = []
-    if not widths2:
+    if not widths2 or n_boards < 2:
         return None
     # Quick test before searching: on the narrower of the flitch's two faces the wood, plus the most
-    # wane the wane rule lets each outside edge carry, must hold both boards and the kerf somewhere.
+    # wane the wane rule lets each outside edge carry, must hold two boards and the kerf somewhere.
     lo1, hi1 = chord(first.v_lo)
     lo2, hi2 = chord(first.v_hi)
     room = np.minimum(hi1 - lo1, hi2 - lo2)
@@ -343,14 +386,23 @@ def _second_board(fl, first: Choice, chord, z, u_lo, u_hi, products, line, rules
                        dataclasses.replace(rules, placement=placement), cache=cache)
         if f is None:
             continue
-        for w2 in widths2:
-            u2 = f.u0 + f.width.wet + k if placement == "low" else f.u0 - k - w2.wet
-            if u2 < u_lo - 1e-6 or u2 + w2.wet > u_hi + 1e-6:
-                continue
-            s = best_board(chord, z, first.v_lo, first.v_hi, t, [w2], products, line.edging_objective, rules,
-                           fixed_u0=u2, cache=cache)
-            if s is not None and (best is None or _total([f, s]) > _total(best)):
-                best = [f, s]
+        row = [f]
+        while len(row) < n_boards:
+            edge_b = row[-1]
+            nxt = None
+            for w2 in widths2:
+                u2 = edge_b.u0 + edge_b.width.wet + k if placement == "low" else edge_b.u0 - k - w2.wet
+                if u2 < u_lo - 1e-6 or u2 + w2.wet > u_hi + 1e-6:
+                    continue
+                s = best_board(chord, z, first.v_lo, first.v_hi, t, [w2], products, line.edging_objective, rules,
+                               fixed_u0=u2, cache=cache)
+                if s is not None and (nxt is None or s.score[0] > nxt.score[0]):
+                    nxt = s
+            if nxt is None:
+                break
+            row.append(nxt)
+        if len(row) > 1 and (best is None or _total(row) > _total(best)):
+            best = row
     if best is None or _total(best) <= _total([first]):
         return None
     return best

@@ -293,8 +293,48 @@ class _Cone:
         z = (r_need - r0) * 2.0 / self.taper * 1000.0          # mm from the small end
         return max(0.0, self.L - z)
 
+    def _best_fixed(self, lo: float, hi: float, t: Size, cant: Size | None, r0: float):
+        """Fixed-spacing edger: the best run of neighbouring gaps that fits the flitch together, each
+        gap a board of the widest product it holds; or a full-width cant board (A-61)."""
+        k = self.line.edger_kerf
+        allowed = [w for w in self.p.valid_widths(t.dry)
+                   if (t.dry, w.dry) not in self.p.centre_boards and (cant is None or w.wet <= cant.wet + 1e-6)]
+        pieces = []
+        for gap in self.line.edger_spacing:
+            fit = [w for w in allowed if w.wet <= gap + 0.5]
+            pieces.append((gap, max(fit, key=lambda x: x.wet) if fit else None))
+        best = (0.0, 0.0, 0.0, 0.0)
+        if cant is not None:
+            for w in allowed:
+                if abs(w.wet - cant.wet) < 1e-6:
+                    clear = self._clear_length(self._radius_needed(lo, hi, t, w), r0)
+                    ok = [x for x in self.lengths[t.dry][w.dry] if x <= clear + 1e-6]
+                    if ok:
+                        vol = t.dry * w.dry * max(ok) / 1e9
+                        best = (vol, vol * self.p.price(t.dry, w.dry, max(ok)), t.dry, w.dry)
+        for i in range(len(pieces)):
+            for j in range(i, len(pieces)):
+                run = pieces[i:j + 1]
+                if any(w is None for _, w in run):
+                    break
+                wet = sum(g for g, _ in run) + k * (j - i)
+                if cant is not None and wet > cant.wet + 1e-6:
+                    break
+                clear = self._clear_length(self._radius_needed(lo, hi, t, Size(run[0][1].dry, wet)), r0)
+                vol = val = 0.0
+                for _, w in run:
+                    ok = [x for x in self.lengths[t.dry][w.dry] if x <= clear + 1e-6]
+                    if ok:
+                        v = t.dry * w.dry * max(ok) / 1e9
+                        vol, val = vol + v, val + v * self.p.price(t.dry, w.dry, max(ok))
+                if vol > best[0] + 1e-12:
+                    best = (vol, val, t.dry, run[0][1].dry)
+        return best
+
     def _best(self, lo: float, hi: float, t: Size, cant: Size | None, r0: float):
         """(dry volume m3, value R, thickness, width) of the best board on this flitch, by volume."""
+        if self.line.edger_spacing:
+            return self._best_fixed(lo, hi, t, cant, r0)
         best = (0.0, 0.0, 0.0, 0.0)
         for w in self.p.valid_widths(t.dry):
             full = cant is not None and abs(w.wet - cant.wet) < 1e-6

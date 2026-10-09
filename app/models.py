@@ -241,6 +241,7 @@ class ProductionLine(Base):
     edger_kerf: Mapped[float] = mapped_column(Float, default=5.0)
     second_board_width: Mapped[str] = mapped_column(String(20), default="Best")
     max_boards_per_flitch: Mapped[int] = mapped_column(Integer, default=0)
+    edger_spacing: Mapped[str] = mapped_column(String(200), default="", server_default="")  # mm, space separated
     kerfs_placeholder: Mapped[bool] = mapped_column(Boolean, default=False)
 
 

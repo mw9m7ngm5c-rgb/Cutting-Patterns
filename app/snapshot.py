@@ -61,6 +61,7 @@ def from_dict(d: dict) -> Dataset:
         ln["saw_type"] = SawType(ln["saw_type"])
         ln["cant_guiding"] = CantGuiding(ln["cant_guiding"])
         ln["edging_objective"] = EdgingObjective(ln["edging_objective"])
+        ln["edger_spacing"] = tuple(ln.get("edger_spacing") or ())
         lines.append(ProductionLine(**ln))
     settings = dict(d["settings"])
     settings["nominal_diameter"] = NominalDiameter(settings["nominal_diameter"])

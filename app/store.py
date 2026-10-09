@@ -72,7 +72,16 @@ def engine_line(ln: m.ProductionLine) -> em.ProductionLine:
         primary_offset_mm=ln.primary_offset_mm, cant_misalignment_mm=ln.cant_misalignment_mm,
         secondary_offset_mm=ln.secondary_offset_mm, edging_objective=em.EdgingObjective(ln.edging_objective),
         edger_blades=ln.edger_blades, edger_kerf=ln.edger_kerf, second_board_width=ln.second_board_width,
-        max_boards_per_flitch=ln.max_boards_per_flitch)
+        max_boards_per_flitch=ln.max_boards_per_flitch, edger_spacing=parse_spacing(ln.edger_spacing or ""))
+
+
+def parse_spacing(text: str) -> tuple[float, ...]:
+    """'160 107' or '160; 107' -> (160.0, 107.0). Raises ValueError on anything that is not a positive number."""
+    parts = [x for x in text.replace(";", " ").replace(",", " ").split() if x]
+    out = tuple(float(x) for x in parts)
+    if any(v <= 0 for v in out):
+        raise ValueError("blade distances must be above 0")
+    return out
 
 
 def engine_class(c: m.LogClass) -> em.LogClass:
@@ -370,7 +379,8 @@ def _line_fields(ln: em.ProductionLine) -> dict:
         primary_offset_mm=ln.primary_offset_mm, cant_misalignment_mm=ln.cant_misalignment_mm,
         secondary_offset_mm=ln.secondary_offset_mm, edging_objective=int(ln.edging_objective),
         edger_blades=ln.edger_blades, edger_kerf=ln.edger_kerf, second_board_width=ln.second_board_width,
-        max_boards_per_flitch=ln.max_boards_per_flitch)
+        max_boards_per_flitch=ln.max_boards_per_flitch,
+        edger_spacing=" ".join(f"{v:g}" for v in ln.edger_spacing))
 
 
 def diameter_range(c: em.LogClass | None) -> str:

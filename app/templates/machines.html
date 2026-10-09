@@ -82,12 +82,21 @@
       {% elif tab == "edging" %}
         <div class="form-grid">
           {{ choice("edging_objective", "Edge for", store.EDGING_OBJECTIVES) }}
-          {{ num("edger_blades", "Edger blades", "2 or 3") }}
+          {{ num("edger_blades", "Edger blades", "2 or more") }}
           {{ num("edger_kerf", "Edger kerf", "mm") }}
-          <label class="field">Second board width (3-blade edger) <span class="unit">"Best" or a dry width in mm</span>
+          <label class="field">Distance between blades <span class="unit">mm wet, left to right, one per gap; empty = movable blades</span>
+            <input name="edger_spacing" value="{{ cur.edger_spacing }}" placeholder="e.g. 160 107"></label>
+          <label class="field">Board widths with movable blades <span class="unit">"Best" or a dry width in mm (second and further boards)</span>
             <input name="second_board_width" value="{{ cur.second_board_width }}"></label>
           {{ num("max_boards_per_flitch", "Most boards per flitch on cross-cut", "0 = off", later=True) }}
         </div>
+        <p class="help">
+          <strong>Fixed blades:</strong> type the distance between each pair of neighbouring blades, for example <code>160 107</code>
+          for three blades. Every gap makes a board of the widest product that fits it, wherever the wood passes the wane rules;
+          the flitch is slid across the blades to the position that gives the most. <strong>Movable blades</strong> (leave it
+          empty): the edger picks the widths for each flitch, up to one board fewer than it has blades.
+          {% if widths %}Wet widths in this dataset: {% for w in widths %}{{ w.dry|int }} mm board = {{ w.wet|num(0) }} mm{{ ", " if not loop.last }}{% endfor %}.{% endif %}
+        </p>
         <h3>Resaw</h3>
         <div class="form-grid">
           <div>{{ flag("primary_resaw", "Resaw sideboards that cannot make their thickness") }}</div>
