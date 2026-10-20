@@ -3,9 +3,10 @@
 Thorpe Timbers (Ngome). Tells the mill which cutting pattern to run for each log diameter class, and what recovery and product mix to expect.
 
 Stand-alone: runs in any browser (Windows, Mac, tablet) from a cloud server or an office computer, and needs no other
-software. You enter your own log classes and logs, board sizes and prices, and saw lines; the generator then finds
-the best pattern and recovery for every log class in one go (Generator → Every log class). Importing an old Simsaw 6
-file is possible but optional.
+software. Each project opens on the **Planner**: enter the saw line, the sizes you cut and your log classes, press
+"Work out the best patterns", and it shows the best pattern for every class as a drawing, with a printable full report
+and an Excel file. The detailed screens (logs, products and prices, machines, patterns, generator, batch runs) are under
+"More". Importing an old Simsaw 6 file is possible but optional.
 
 Status: **all four phases complete**: simulation engine and command line, web app, pattern generator, and advanced sawing (curve sawing, misalignment and offsets, arris alignment, three-blade edger, grades, real-log variation, live sawing, chipper-profiler lines, scenario comparison).
 
@@ -39,7 +40,7 @@ Back up the database at any time (safe while the app runs): `.venv/bin/python -m
 Tests and the engine command line:
 
 ```
-.venv/bin/python -m pytest                         # 256 tests
+.venv/bin/python -m pytest                         # 263 tests
 .venv/bin/python cli.py validate --dataset tests/fixtures/ngomi_1 --run Test1
 .venv/bin/python cli.py simulate --dataset tests/fixtures/ngomi_1 --pattern "25/114/25" "2*19 3*38 3*19" --class 1 --mix --volumes
 ```

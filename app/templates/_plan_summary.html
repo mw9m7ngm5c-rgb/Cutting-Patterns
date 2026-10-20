@@ -1,0 +1,23 @@
+<table class="data summary">
+  <thead><tr><th>Class</th><th>Diameter<span class="unit">cm</span></th><th class="text">Pattern (headrig · gang saw)</th>
+    <th>Logs</th><th>Log volume<span class="unit">m³</span></th><th>Timber<span class="unit">m³ finished</span></th>
+    <th>Recovery</th><th>Boards per log</th>{% if res.valued %}<th>Nett value<span class="unit">R/m³ log</span></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for c in res.classes %}
+    {% set ps = c.summary %}
+    <tr><td>{{ c.no }}</td><td>{{ "%g"|format(c.min_cm) }}–{{ "%g"|format(c.max_cm) }}</td>
+      {% if c.best %}
+      <td class="text"><code>{{ c.best.primary }}</code> · <code>{{ c.best.secondary or "–" }}</code></td>
+      <td>{{ ps.logs if ps else c.logs }}</td><td>{{ ps.log_volume|num(3) if ps else "" }}</td><td>{{ ps.dry_volume|num(3) if ps else "" }}</td>
+      <td><strong>{{ (ps.dry_recovery if ps else c.best.dry_recovery)|pct }}</strong></td>
+      <td>{{ (ps.boards_per_log if ps else c.best.boards_per_log)|num(1) }}</td>
+      {% if res.valued %}<td>{{ ps.nett_value|num if ps else "" }}</td>{% endif %}
+      {% else %}<td class="text" colspan="{{ 7 if res.valued else 6 }}">{{ c.problem or "no pattern fits" }}</td>{% endif %}</tr>
+  {% endfor %}
+  {% if res.total %}{% set t = res.total %}
+    <tr class="total"><td class="text" colspan="3">All classes</td><td>{{ t.logs }}</td><td>{{ t.log_volume|num(3) }}</td>
+      <td>{{ t.dry_volume|num(3) }}</td><td>{{ t.dry_recovery|pct }}</td><td>{{ t.boards_per_log|num(1) }}</td>
+      {% if res.valued %}<td>{{ t.nett_value|num }}</td>{% endif %}</tr>
+  {% endif %}
+  </tbody>
+</table>

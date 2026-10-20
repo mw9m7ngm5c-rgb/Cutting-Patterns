@@ -10,14 +10,19 @@
 <header class="top no-print">
   <a class="brand" href="/">Sawing patterns</a>
   {% if ds %}
-  <span class="ds-name" title="Current dataset">{{ ds.name }}</span>
+  <a class="ds-name" href="/" title="All projects">{{ ds.name }}</a>
   <nav>
-    {% set items = [("overview", "", "Overview"), ("logs", "/logs", "Logs"), ("products", "/products", "Products"),
+    <a href="/d/{{ ds.id }}/plan" class="{{ 'active' if section == 'plan' }}">Planner</a>
+    {% set items = [("overview", "", "Overview"), ("logs", "/logs", "Logs"), ("products", "/products", "Products and prices"),
                     ("machines", "/machines", "Machines"), ("patterns", "/patterns", "Sawing patterns"), ("generator", "/generator", "Generator"),
                     ("runs", "/runs", "Batch runs"), ("reports", "/reports", "Reports"), ("settings", "/settings", "Settings")] %}
-    {% for key, path, label in items %}
-      <a href="/d/{{ ds.id }}{{ path }}" class="{{ 'active' if section == key }}">{{ label }}</a>
-    {% endfor %}
+    <details class="more">
+      <summary class="{{ 'active' if section not in ('plan', 'datasets', None) }}">More{% for key, path, label in items if section == key %}: {{ label }}{% endfor %}</summary>
+      <div class="menu">
+        <p class="help">Detailed screens, for when you need more control than the planner gives.</p>
+        {% for key, path, label in items %}<a href="/d/{{ ds.id }}{{ path }}" class="{{ 'active' if section == key }}">{{ label }}</a>{% endfor %}
+      </div>
+    </details>
   </nav>
   {% endif %}
   {% if user %}
@@ -37,6 +42,11 @@
   {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
   {% block content %}{% endblock %}
 </main>
+<script>
+document.addEventListener("click", e => {
+  document.querySelectorAll("details.more[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; });
+});
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

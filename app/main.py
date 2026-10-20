@@ -28,7 +28,7 @@ from engine.sawing import check_pattern
 from . import auth
 from . import models as m
 from . import snapshot
-from . import genjobs, reports, runs, simview, store, svg, tables
+from . import genjobs, planner, reports, runs, simview, store, svg, tables
 from .db import Database, backup_database, db_url, migrate
 
 HERE = pathlib.Path(__file__).parent
@@ -246,12 +246,12 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             return page(request, "datasets.html", rows=rows, msg=msg, section="datasets")
 
     @app.post("/datasets/new")
-    def new_dataset(name: str = Form(...), start: str = Form("example")):
+    def new_dataset(name: str = Form(...), start: str = Form("empty")):
         with db.session() as s:
-            make = store.create_empty_dataset if start == "empty" else store.create_default_dataset
-            ds = make(s, name.strip() or "New dataset")
+            make = store.create_default_dataset if start == "example" else store.create_empty_dataset
+            ds = make(s, name.strip() or "New project")
             s.commit()
-            return RedirectResponse(f"/d/{ds.id}", 303)
+            return RedirectResponse(f"/d/{ds.id}/plan", 303)
 
     @app.post("/datasets/import")
     def import_dataset(file: UploadFile = File(...), name: str = Form("")):
@@ -269,7 +269,7 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
                 except Exception as e:   # a damaged or unexpected file: say so, keep the app running
                     s.rollback()
                     return go("/", msg=f"Could not import {file.filename}: {e}")
-        return RedirectResponse(f"/d/{ds.id}", 303)
+        return RedirectResponse(f"/d/{ds.id}/plan", 303)
 
     @app.post("/datasets/{ds_id}/duplicate")
     def duplicate(ds_id: int, name: str = Form(...)):
@@ -293,6 +293,73 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             store.delete_dataset(s, ds_id)
             s.commit()
         return RedirectResponse("/", 303)
+
+    # -------------------------------------------------------------- planner (the simple way in)
+
+    PLAN_SEARCH = {"objective": "volume", "simulate": 80, "symmetric": True, "thicker_to_centre": True,
+                   "max_sideboards": 2, "max_thicknesses": 3, "real_logs": False}
+
+    def _plan_job(s, ds_id: int, jid: int | None = None):
+        q = select(m.GeneratorJob).where(m.GeneratorJob.dataset_id == ds_id, m.GeneratorJob.kind == "plan")
+        if jid:
+            q = q.where(m.GeneratorJob.id == jid)
+        return s.scalar(q.order_by(m.GeneratorJob.id.desc()))
+
+    def _plan_page(request, s, ds_id: int, plan, msg: str = "", job=None):
+        c = ctx(s, ds_id, "plan")
+        c["placeholders"] = []                       # the planner does not use prices
+        job = job if job is not None else _plan_job(s, ds_id)
+        res = planner.results(s, job) if job is not None else None
+        return page(request, "plan.html", **c, plan=plan, job=job, res=res, msg=msg, saw_types=planner.SAW_TYPES)
+
+    @app.get("/d/{ds_id}/plan", response_class=HTMLResponse)
+    def plan_page(request: Request, ds_id: int, msg: str = ""):
+        with db.session() as s:
+            dataset_or_404(s, ds_id)
+            return _plan_page(request, s, ds_id, planner.load(s, ds_id), msg)
+
+    @app.post("/d/{ds_id}/plan", response_class=HTMLResponse)
+    async def plan_save(request: Request, ds_id: int):
+        form = await request.form()
+        calculate = form.get("action") == "calculate"
+        with db.session() as s:
+            dataset_or_404(s, ds_id)
+            problems = planner.save(s, ds_id, form)
+            if problems:
+                s.rollback()
+                line = s.scalar(select(m.ProductionLine).where(m.ProductionLine.dataset_id == ds_id))
+                return _plan_page(request, s, ds_id, planner.from_form(form, problems, line))
+            s.commit()
+            if not calculate:
+                return go(f"/d/{ds_id}/plan", msg="Saved.")
+            plan = planner.load(s, ds_id)
+            if plan.problems:
+                return _plan_page(request, s, ds_id, plan, msg="Saved, but not ready to work out yet: " + " ".join(plan.problems))
+            planner.make_sample_logs(s, ds_id)
+            s.commit()
+            e = store.engine_dataset(s, ds_id)
+            samples = planner.sample_log_nos(s, ds_id)
+            sample_classes = sorted({store.class_of(g, e.log_classes) for g in e.logs if g.no in samples} - {None})
+            ln = plan.line
+            params = {**PLAN_SEARCH, "line_id": ln.id, "line_name": ln.name, "sample_classes": sample_classes}
+        jid = genjobs.create(db, ds_id, e, "plan", params, f"Best patterns on {ln.name}")
+        if run_in_thread:
+            genjobs.start(db, jid, parallel)
+        else:
+            genjobs.execute(db, jid, parallel)
+        return RedirectResponse(f"/d/{ds_id}/plan#results", 303)
+
+    @app.get("/d/{ds_id}/plan/report", response_class=HTMLResponse)
+    def plan_report(request: Request, ds_id: int, job: int | None = None):
+        with db.session() as s:
+            c = ctx(s, ds_id, "plan")
+            c["placeholders"] = []
+            j = _plan_job(s, ds_id, job)
+            res = planner.results(s, j) if j is not None else None
+            if res is None:
+                return go(f"/d/{ds_id}/plan", msg="Work out the best patterns first; the report comes from them.")
+            return page(request, "plan_report.html", **c, job=j, res=res, saw_types=planner.SAW_TYPES,
+                        now=dt.datetime.now())
 
     @app.get("/d/{ds_id}", response_class=HTMLResponse)
     def overview(request: Request, ds_id: int):
@@ -995,28 +1062,7 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
             ln = s.get(m.ProductionLine, p["line_id"])
             if job.kind != "classes" or not job.result or ln is None:
                 return go(f"/d/{ds_id}/generator/{jid}", msg="Nothing to save.")
-            by_no = {c.no: c for c in s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id))}
-            saved, missing = 0, []
-            for row in json.loads(job.result)["classes"]:
-                cl = by_no.get(row["no"])
-                if not row["ranked"]:
-                    continue
-                if cl is None:
-                    missing.append(str(row["no"]))
-                    continue
-                old = s.scalars(select(m.SawPattern).where(m.SawPattern.line_id == ln.id,
-                                                           m.SawPattern.log_class_id == cl.id)).all()
-                if replace:
-                    for sp in old:
-                        s.delete(sp)
-                    s.flush()
-                    n = 1
-                else:
-                    n = max((sp.pattern_no for sp in old), default=0) + 1
-                best = row["ranked"][0]
-                s.add(m.SawPattern(dataset_id=ds_id, line_id=ln.id, log_class_id=cl.id, pattern_no=n,
-                                   primary=best["primary"], secondary=best["secondary"], source="generated"))
-                saved += 1
+            saved, missing = genjobs.save_best(s, ds_id, ln.id, json.loads(job.result)["classes"], bool(replace))
             s.commit()
         msg = f"Best pattern saved for {saved} class{'es' if saved != 1 else ''} on {ln.name}."
         if missing:

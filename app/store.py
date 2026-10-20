@@ -192,6 +192,7 @@ NGOMI_INVALID = {(25, 114), (50, 102), (50, 114)}
 NGOMI_CLASSES = [(18.0, 21.9), (22.0, 25.9), (26.0, 29.9), (30.0, 35.9), (36.0, 41.9)]
 PLACEHOLDER_PRICE = 4000.0
 PLACEHOLDER_LOG_PRICE = 120.0
+EXAMPLE_LOG_LENGTH_M, EXAMPLE_TAPER = 4.8, 8.0     # the example's typical log per class, to be replaced
 
 
 def create_empty_dataset(s: Session, name: str) -> m.Dataset:
@@ -234,7 +235,8 @@ def create_default_dataset(s: Session, name: str) -> m.Dataset:
         s.add(m.LogClass(dataset_id=i, no=n, min_diameter_cm=lo, max_diameter_cm=hi, min_length_m=1.8, max_length_m=6.6,
                          length_incr_m=0.3, min_taper=0, max_taper=25, min_sweep=0, max_sweep=40, min_ovality=0.5,
                          max_ovality=1.5, min_defect_core=0, max_defect_core=100,
-                         log_price=PLACEHOLDER_LOG_PRICE, log_price_placeholder=True))
+                         log_price=PLACEHOLDER_LOG_PRICE, log_price_placeholder=True,
+                         plan_length_m=EXAMPLE_LOG_LENGTH_M, plan_taper=EXAMPLE_TAPER))
     s.add(m.ProductionLine(dataset_id=i, no=1, name="Line 1", primary_kerf=3.0, secondary_kerf=3.0,
                            primary_resaw=True, primary_resaw_kerf=5.0, secondary_resaw=True, secondary_resaw_kerf=5.0,
                            edger_blades=3, edger_kerf=5.0, second_board_width="Best", kerfs_placeholder=True))
