@@ -18,7 +18,7 @@
 <div class="panel">
   <h2 style="margin-top:0">Log model</h2>
   <div class="form-grid">
-    <label class="field">Disc separation <span class="unit">cm (Simsaw default 10; Ngomi uses 5)</span><input name="disc_separation_cm" value="{{ st.disc_separation_cm }}"></label>
+    <label class="field">Disc separation <span class="unit">cm (10 is usual; 5 is finer and slower)</span><input name="disc_separation_cm" value="{{ st.disc_separation_cm }}"></label>
     <label class="field">Points per disc <span class="unit">used when discs are polygons</span><input name="points_per_disc" value="{{ st.points_per_disc }}"></label>
     <label class="check"><input type="checkbox" name="discretised" {{ "checked" if st.discretised }}> Store discs as polygons (otherwise exact ellipses)</label>
     <label class="field">Random seed <span class="unit">for board grades and real-log variation</span><input name="seed" value="{{ st.seed }}"></label>

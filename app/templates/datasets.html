@@ -28,27 +28,35 @@
     </tbody>
   </table>
   {% else %}
-  <p>No datasets yet. Start a new one or import a Simsaw dataset below.</p>
+  <p>No datasets yet. Start one below: it holds your log classes and logs, the products you cut, your saw lines, and the
+    sawing patterns and results.</p>
   {% endif %}
 </div>
-<div class="row">
-  <div class="panel grow">
-    <h2>New dataset</h2>
-    <p class="help">Starts with the Ngomi sizes, log classes, production line and settings. Prices, log prices and kerfs
-      are marked as placeholders until you replace them. No logs and no patterns.</p>
-    <form method="post" action="/datasets/new" class="inline-form">
-      <input name="name" placeholder="Name" required><button type="submit">Create</button>
-    </form>
-  </div>
-  <div class="panel grow">
-    <h2>Import from Simsaw</h2>
-    <p class="help">Reads a Simsaw 6 .mdb file: logs, classes, products, wane, machines, patterns and settings.
-      Batch runs in the file come across with Simsaw's own results, for comparison.</p>
-    <form method="post" action="/datasets/import" enctype="multipart/form-data" class="inline-form">
-      <input type="file" name="file" accept=".mdb,.accdb" required>
-      <input name="name" placeholder="Name (optional)">
-      <button type="submit">Import</button>
-    </form>
-  </div>
+<div class="panel">
+  <h2>New dataset</h2>
+  <form method="post" action="/datasets/new">
+    <div class="form-grid">
+      <label class="field">Name <input name="name" placeholder="for example Ngome 2026" required></label>
+    </div>
+    <fieldset style="margin-top:.8rem"><legend>Start from</legend>
+      <label class="check"><input type="radio" name="start" value="example" checked> Example values: four thicknesses, four widths,
+        five log classes (18 to 42 cm) and one saw line, ready to change. Prices, log prices and kerfs are marked as placeholders
+        until you enter your own.</label>
+      <label class="check"><input type="radio" name="start" value="empty"> Empty: you enter every size, log class and saw line yourself.</label>
+    </fieldset>
+    <p style="margin-top:.8rem"><button type="submit">Create</button></p>
+  </form>
+  <p class="help">Then, in order: log classes and logs, products and prices, the saw line, and the generator finds the best pattern
+    and recovery for every class.</p>
 </div>
+<details class="panel">
+  <summary>Import from a Simsaw 6 file (optional)</summary>
+  <p class="help">Only if you have an old Simsaw .mdb file and want to bring its logs, products, machines and patterns across.
+    Nothing else in the app needs Simsaw.</p>
+  <form method="post" action="/datasets/import" enctype="multipart/form-data" class="inline-form">
+    <input type="file" name="file" accept=".mdb,.accdb" required>
+    <input name="name" placeholder="Name (optional)">
+    <button type="submit">Import</button>
+  </form>
+</details>
 {% endblock %}

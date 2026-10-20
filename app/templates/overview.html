@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>{{ ds.name }}</h1>
+<div class="panel">
+  <h2 style="margin-top:0">Steps</h2>
+  <table class="data steps">
+    <tbody>{% for key, title, what, done, status in steps %}
+      <tr><td class="text" style="width:1.5rem">{{ "✓" if done else loop.index }}</td>
+        <td class="text"><a href="/d/{{ ds.id }}/{{ key }}"><strong>{{ title }}</strong></a></td>
+        <td class="text help">{{ what }}</td><td class="text">{{ status }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+</div>
 <div class="row">
   <div class="panel grow">
     <h2 style="margin-top:0">Log classes</h2>
@@ -28,16 +38,5 @@
       <button type="submit">Save</button>
     </form>
   </div>
-</div>
-<div class="panel">
-  <h2 style="margin-top:0">Workflow</h2>
-  <ol>
-    <li><a href="/d/{{ ds.id }}/logs">Logs</a>: define log classes, then type, paste or generate logs.</li>
-    <li><a href="/d/{{ ds.id }}/products">Products</a>: sizes (dry and wet), which products the mill sells and their prices, wane rules.</li>
-    <li><a href="/d/{{ ds.id }}/machines">Machines</a>: kerfs, resaws and the edger for each production line.</li>
-    <li><a href="/d/{{ ds.id }}/patterns">Sawing patterns</a>: build patterns for each class and try them on single logs.</li>
-    <li><a href="/d/{{ ds.id }}/runs">Batch runs</a>: saw every pattern on its class and keep the results.</li>
-    <li><a href="/d/{{ ds.id }}/reports">Reports</a>: one-liner, board and summary reports, printable or as Excel.</li>
-  </ol>
 </div>
 {% endblock %}

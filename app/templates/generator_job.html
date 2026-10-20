@@ -14,7 +14,33 @@
 {% else %}
 {% if job.message %}<div class="msg">{{ job.message }}</div>{% endif %}
 
-{% if job.kind == "class" %}
+{% if job.kind == "classes" %}
+  <p class="help">Ranked by {{ objective_label|lower }} on {{ p.line_name }}. {{ result.meta.seconds }} s.
+    Recovery is the share of log volume that becomes boards.</p>
+  <div class="panel" style="overflow-x:auto">
+    <table class="data">
+      <thead><tr><th>Class</th><th>SED<span class="unit">cm</span></th><th class="text">Searched on</th><th class="text">Best pattern</th>
+        <th>Dry recovery</th><th>Wet recovery</th><th>Nett value<span class="unit">R/m³ log</span></th><th>Boards per log</th>
+        <th class="text">Next best</th></tr></thead>
+      <tbody>{% for row in result.classes %}
+        <tr><td>{{ row.no }}</td><td>{{ "%.1f"|format(row.min_cm) }} – {{ "%.1f"|format(row.max_cm) }}</td>
+          <td class="text">{{ row.logs }} {{ "ideal logs" if row.ideal else "logs" }}</td>
+          {% if row.ranked %}{% set b = row.ranked[0] %}
+          <td class="text"><code>{{ b.primary }}</code> &nbsp; <code>{{ b.secondary }}</code></td>
+          <td><strong>{{ b.dry_recovery|pct }}</strong></td><td>{{ b.wet_recovery|pct }}</td><td>{{ b.nett_value|num }}</td>
+          <td>{{ b.boards_per_log|num(1) }}</td>
+          <td class="text help" style="white-space:normal">{% for r in row.ranked[1:] %}<code>{{ r.primary }}</code> <code>{{ r.secondary }}</code> ({{ r.dry_recovery|pct }}){% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+          {% else %}<td class="text" colspan="6">{{ row.problem or "No pattern met every constraint." }}</td>{% endif %}</tr>
+      {% endfor %}</tbody>
+    </table>
+    <form class="no-print" method="post" action="/d/{{ ds.id }}/generator/{{ job.id }}/save-all" style="margin-top:.8rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap">
+      <button type="submit">Save the best pattern of every class</button>
+      <label class="check"><input type="checkbox" name="replace" checked> Replace the classes' current patterns on {{ p.line_name }}</label>
+    </form>
+    <p class="help no-print">Then run a <a href="/d/{{ ds.id }}/runs">batch run</a> for the full report, or open one class in detail on the
+      <a href="/d/{{ ds.id }}/generator?tab=class">One class in detail</a> tab to compare more patterns with diagrams.</p>
+  </div>
+{% elif job.kind == "class" %}
   {% set meta = result.meta %}
   <p class="help">{{ "{:,}".format(meta.enumerated).replace(",", " ") }} patterns built and checked on tapered logs of
     {{ meta.diameters_mm|map("int")|join(", ") }} mm small-end diameter and {{ "%.1f"|format(meta.length_m) }} m;

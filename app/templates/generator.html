@@ -31,11 +31,33 @@
 {% block content %}
 <h1>Pattern generator</h1>
 <div class="tabs">
-  {% for key, label in [("class", "Best patterns for a class"), ("chart", "Diameter chart"), ("history", "Earlier searches")] %}
+  {% for key, label in [("classes", "Every log class"), ("class", "One class in detail"), ("chart", "Diameter chart"), ("history", "Earlier searches")] %}
     <a href="?tab={{ key }}" class="{{ 'active' if tab == key }}">{{ label }}{% if key == "history" %} ({{ jobs|length }}){% endif %}</a>{% endfor %}
 </div>
 {% if not lines %}
   <p>Add a production line on the <a href="/d/{{ ds.id }}/machines">Machines</a> page first.</p>
+{% elif tab == "classes" %}
+<form class="panel" method="post" action="/d/{{ ds.id }}/generator">
+  <input type="hidden" name="kind" value="classes">
+  <p class="help">Finds the best pattern for each log class in turn and shows the three best per class with their recovery.
+    A class with logs is searched on its own logs; a class with none is searched on ideal logs at every centimetre of its
+    diameter range, shaped like the dataset's logs. Allow up to a minute per class.</p>
+  {% if not classes %}<p class="error">Add log classes on the <a href="/d/{{ ds.id }}/logs">Logs</a> page first.</p>{% endif %}
+  <div class="form-grid">
+    <label class="field">Production line
+      <select name="line_id">{% for ln in lines %}<option value="{{ ln.id }}">{{ ln.name }}</option>{% endfor %}</select></label>
+    <label class="field">Candidates to saw per class<input name="simulate" value="80" inputmode="numeric"></label>
+  </div>
+  <table class="data" style="margin-top:.8rem; max-width: 34rem">
+    <thead><tr><th>Class</th><th>SED<span class="unit">cm</span></th><th class="text">Searched on</th></tr></thead>
+    <tbody>{% for c in classes %}
+      <tr><td>{{ c.no }}</td><td>{{ "%.1f"|format(c.min_diameter_cm) }} – {{ "%.1f"|format(c.max_diameter_cm) }}</td>
+        <td class="text">{% if counts.get(c.no, 0) %}{{ counts.get(c.no) }} logs{% else %}ideal logs (no logs in this class){% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {{ options("classes") }}
+  <p><button type="submit" {{ "disabled" if not classes }}>Find the best pattern for every class</button></p>
+</form>
 {% elif tab == "class" %}
 <form class="panel" method="post" action="/d/{{ ds.id }}/generator">
   <input type="hidden" name="kind" value="class">

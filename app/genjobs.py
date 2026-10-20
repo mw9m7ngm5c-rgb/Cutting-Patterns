@@ -1,4 +1,5 @@
-"""Generator searches as background jobs: one class (or diameter), or a diameter chart.
+"""Generator searches as background jobs: one class (or diameter), every log class at once, or a
+diameter chart.
 
 A job keeps the form it was started with and a snapshot of the engine inputs, like a batch run, so
 its results stay meaningful after the dataset changes.
@@ -75,6 +76,24 @@ def ranked_dict(r: G.Ranked) -> dict:
     return d
 
 
+def class_logs(ds: Dataset, cl, length_m: float | None = None) -> tuple[list, bool]:
+    """The logs to search a class on: its own logs when it has any; otherwise ideal logs at every
+    centimetre across its diameter range, shaped like the dataset's logs (or straight logs with 10 mm/m
+    taper when there are none). The flag says whether ideal logs were used."""
+    own = ds.logs_in_class(cl.no)
+    if own:
+        return own, False
+    seds, d = [], cl.min_diameter_cm
+    while d <= cl.max_diameter_cm + 1e-6:
+        seds.append(round(d, 1))
+        d += 1.0
+    if seds[-1] < cl.max_diameter_cm - 0.05:
+        seds.append(round(cl.max_diameter_cm, 1))
+    logs = [dataclasses.replace(G.representative_logs(sed, ds.logs, length_m)[0], no=i + 1)
+            for i, sed in enumerate(seds)]
+    return logs, True
+
+
 def _steps(result: dict) -> list[G.Step]:
     return [G.Step(st["sed"], [SimpleNamespace(**r) for r in st["ranked"]]) for st in result.get("steps", [])]
 
@@ -143,6 +162,28 @@ def execute(db: Database, job_id: int, parallel: bool = True) -> None:
                                 "diameters_mm": res.diameters_mm, "length_m": res.length_m,
                                 "truncated": res.truncated, "seconds": round(time.time() - t0, 1),
                                 "log_nos": [g.no for g in logs] if p.get("mode") != "diameter" else []}}
+            elif job.kind == "classes":
+                classes = sorted(ds.log_classes, key=lambda cl: cl.no)
+                rows = []
+                for i, cl in enumerate(classes):
+                    if cancel.is_set():
+                        break
+                    label = f"Class {cl.no} ({i + 1} of {len(classes)})"
+                    logs, ideal = class_logs(ds, cl, p.get("length_m") or None)
+                    row = {"no": cl.no, "min_cm": cl.min_diameter_cm, "max_cm": cl.max_diameter_cm,
+                           "logs": len(logs), "ideal": ideal, "ranked": [], "problem": ""}
+                    try:
+                        res = G.generate(logs, ds.products, line, ds.settings, cl.log_price, obj, c,
+                                         simulate=int(p.get("simulate", 80)), top=3,
+                                         progress=lambda st, d, n, label=label: progress(f"{label}: {st}", d, n),
+                                         cancelled=cancel.is_set, map_fn=mapf)
+                        row["ranked"] = [ranked_dict(r) for r in res.ranked[:3]]
+                    except G.GeneratorError as e:
+                        row["problem"] = str(e)
+                    rows.append(row)
+                if rows and all(r["problem"] for r in rows):
+                    raise G.GeneratorError(rows[0]["problem"])
+                out = {"classes": rows, "meta": {"seconds": round(time.time() - t0, 1)}}
             else:
                 steps = G.diameter_chart(int(p["from_cm"]), int(p["to_cm"]), ds.logs, ds.products, line, ds.settings,
                                          lambda d: class_price(ds, d), obj, c, simulate=int(p.get("simulate", 24)),
