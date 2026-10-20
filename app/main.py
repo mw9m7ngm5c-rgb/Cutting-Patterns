@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from fastapi.templating import Jinja2Templates
+from markupsafe import escape
 from sqlalchemy import func, select
 from sqlalchemy import inspect as sqlalchemy_inspect
 
@@ -65,6 +66,23 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
     if setup_problem:
         print(f"Sign-in set-up: {setup_problem}", file=sys.stderr, flush=True)
     app = FastAPI(title="Sawing patterns")
+
+    @app.exception_handler(Exception)
+    async def server_error(request: Request, exc: Exception):
+        """Say what went wrong in words someone can pass on, instead of a bare "Internal Server Error".
+        The full traceback goes to the server log."""
+        import traceback as tb
+        print(f"Error on {request.method} {request.url.path}:", file=sys.stderr)
+        tb.print_exception(exc, file=sys.stderr)
+        where = tb.extract_tb(exc.__traceback__)[-1] if exc.__traceback__ else None
+        detail = f"{type(exc).__name__}: {exc}" + (f" ({pathlib.Path(where.filename).name}, line {where.lineno})" if where else "")
+        body = (f"<!doctype html><html lang='en-ZA'><head><meta charset='utf-8'><title>Something went wrong</title>"
+                f"<link rel='stylesheet' href='/static/app.css'></head><body><main><h1>Something went wrong</h1>"
+                f"<p class='lead'>The app could not finish that. Nothing you saved before this has been lost.</p>"
+                f"<p>If it happens again, send this to whoever looks after the app:</p>"
+                f"<pre class='panel' style='white-space:pre-wrap'>{escape(request.method)} {escape(request.url.path)}\n{escape(detail)}</pre>"
+                f"<p><a href='javascript:history.back()'>← Go back</a> · <a href='/'>Projects</a></p></main></body></html>")
+        return HTMLResponse(body, status_code=500)
     app.state.db = db
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     tpl = Jinja2Templates(directory=HERE / "templates")
@@ -971,6 +989,8 @@ def create_app(url: str | None = None, run_in_thread: bool = True, parallel: boo
         with db.session() as s:
             c = ctx(s, ds_id, "generator")
             job = _job(s, ds_id, jid)
+            if job.kind == "plan":                    # the planner's own search: shown on the planner
+                return RedirectResponse(f"/d/{ds_id}/plan", 303)
             p = json.loads(job.params)
             result = json.loads(job.result) if job.result else None
             classes = s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id).order_by(m.LogClass.no)).all()
