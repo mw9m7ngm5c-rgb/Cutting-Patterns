@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ ds.name }} · Sawing pattern report{% endblock %}
+{% block content %}
+{% set ln = res.line %}
+<p class="no-print"><a href="/d/{{ ds.id }}/plan#results">← Back to the planner</a> &nbsp;
+  <button type="button" onclick="window.print()">Print or save as PDF</button>
+  {% if res.run %}<a class="button secondary" href="/d/{{ ds.id }}/reports/{{ res.run.id }}/excel">Excel</a>{% endif %}</p>
+
+<div class="report">
+<h1>Sawing pattern report: {{ ds.name }}</h1>
+<p class="help">Worked out {{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at }} · printed {{ now.strftime("%Y-%m-%d %H:%M") }}.
+  Best pattern for each log class by recovery (finished timber as a share of log volume).</p>
+
+<div class="row">
+  <div class="panel grow">
+    <h2 style="margin-top:0">Saw line: {{ ln.name }}</h2>
+    <dl class="kv">
+      <dt>Type</dt><dd>{{ saw_types.get(ln.saw_type|int, "") }}</dd>
+      <dt>Headrig kerf</dt><dd>{{ "%g"|format(ln.primary_kerf) }} mm</dd>
+      <dt>Gang saw kerf</dt><dd>{{ "%g"|format(ln.secondary_kerf) }} mm</dd>
+      <dt>Edger</dt><dd>{{ ln.edger_blades }} blades, {{ "%g"|format(ln.edger_kerf) }} mm kerf{% if ln.edger_spacing %},
+        fixed at {% for v in ln.edger_spacing %}{{ "%g"|format(v) }}{{ " · " if not loop.last }}{% endfor %} mm apart{% else %}, blades move{% endif %}</dd>
+    </dl>
+  </div>
+  <div class="panel grow">
+    <h2 style="margin-top:0">Sizes cut</h2>
+    <p>{% for x in res.products.combinations if x.valid %}{{ x.thickness|int }} × {{ x.width|int }}{{ ", " if not loop.last }}{% endfor %} mm finished</p>
+    <p class="help">Green (sawn) sizes: thicknesses {% for t in res.products.thicknesses %}{{ "%g"|format(t.dry) }}→{{ "%g"|format(t.wet) }}{{ ", " if not loop.last }}{% endfor %};
+      widths {% for w in res.products.widths %}{{ "%g"|format(w.dry) }}→{{ "%g"|format(w.wet) }}{{ ", " if not loop.last }}{% endfor %} mm.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">Summary</h2>
+  {% include "_plan_summary.html" %}
+  <p class="help" style="margin-top:.6rem">Reading a pattern: <code>25/152/25</code> is the headrig taking a 25 mm board off each side and
+    leaving a 152 mm cant; <code>2*25 2*50 2*25</code> is the gang saw cutting that cant into two 25s, two 50s and two 25s.</p>
+</div>
+
+{% for c in res.classes if c.best %}
+<div class="panel class-card page">
+  <h2 style="margin-top:0">Class {{ c.no }} · {{ "%g"|format(c.min_cm) }}–{{ "%g"|format(c.max_cm) }} cm small-end diameter</h2>
+  <p class="pattern-code"><span class="help">Headrig</span> <code>{{ c.best.primary }}</code>
+    <span class="help">Gang saw</span> <code>{{ c.best.secondary or "–" }}</code></p>
+  <div class="row">
+    <div class="drawing">
+      {{ svg.diagram(c.diagram, labels=True) if c.diagram }}
+      <p class="help" style="text-align:center">Drawn on a {{ "%g"|format(c.log.sed_cm) }} cm × {{ "%g"|format(c.log.length_m) }} m log.
+        Small end dashed; grey bands are saw cuts.</p>
+    </div>
+    <div class="grow">
+      {% set ps = c.summary %}
+      {% if ps %}
+      <dl class="kv">
+        <dt>Logs sawn</dt><dd>{{ ps.logs }} {{ "sample logs (typical log for the class)" if c.sample else "logs" }}</dd>
+        <dt>Recovery</dt><dd><strong>{{ ps.dry_recovery|pct }}</strong> finished · {{ ps.wet_recovery|pct }} green</dd>
+        <dt>Boards per log</dt><dd>{{ ps.boards_per_log|num(1) }}, average {{ ps.average_length|num(2) }} m</dd>
+        {% if res.valued %}<dt>Nett value</dt><dd>{{ ps.nett_value|num }} R/m³ log</dd>{% endif %}
+      </dl>
+      {% endif %}
+      {% if c.diagram and c.diagram.blades %}
+      <h3>Saw settings <span class="help">(green sizes, mm from the log centre)</span></h3>
+      <dl class="kv">
+        <dt>Headrig blades</dt><dd>{{ c.diagram.blades.primary|join(" · ") }}</dd>
+        {% if c.diagram.blades.secondary %}<dt>Gang saw blades</dt><dd>{{ c.diagram.blades.secondary|join(" · ") }}</dd>{% endif %}
+      </dl>
+      {% endif %}
+    </div>
+  </div>
+  <div class="row">
+    {% if c.mix %}
+    <div>
+      <h3>Boards</h3>
+      <table class="data">
+        <thead><tr><th class="text">Size<span class="unit">mm finished</span></th><th>Pieces</th><th>Per log</th>
+          <th>Average length<span class="unit">m</span></th><th>Volume<span class="unit">m³</span></th><th>Share</th></tr></thead>
+        <tbody>{% for x in c.mix %}<tr><td class="text">{{ x.thickness|int }} × {{ x.width|int }}</td><td>{{ x.pieces }}</td>
+          <td>{{ x.per_log|num(1) }}</td><td>{{ x.length|num(2) }}</td><td>{{ x.dry_volume|num(3) }}</td><td>{{ x.share|pct }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% endif %}
+    {% if c.balance %}
+    <div>
+      <h3>Where the log goes</h3>
+      <table class="data">
+        <thead><tr><th class="text"></th><th>m³</th><th>Share of log</th></tr></thead>
+        <tbody>{% for name, v, share in c.balance %}<tr class="{{ 'total' if name in ('Logs', 'Total') }}"><td class="text">{{ name }}</td>
+          <td>{{ v|num(3) }}</td><td>{{ share|pct }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  {% if c.others %}<p class="help">Next best: {% for r in c.others %}<code>{{ r.primary }}</code> · <code>{{ r.secondary or "–" }}</code> ({{ r.dry_recovery|pct }}){{ "; " if not loop.last }}{% endfor %}</p>{% endif %}
+</div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,17 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Datasets</h1>
-<p class="help">A dataset holds one set of logs, products, machines and sawing patterns, with the batch runs made from them.</p>
+<h1>Projects</h1>
+<p class="lead">Each project holds one saw line, the sizes you cut and your log classes, with the patterns and reports worked out from them.</p>
 <div class="panel">
   {% if rows %}
   <table class="data">
-    <thead><tr><th class="text">Name</th><th class="text">Source</th><th>Logs</th><th>Patterns</th><th>Runs</th><th class="text">Changed</th><th class="text"></th></tr></thead>
+    <thead><tr><th class="text">Project</th><th class="text">Changed</th><th class="text"></th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
-        <td class="text"><a href="/d/{{ r.ds.id }}"><strong>{{ r.ds.name }}</strong></a></td>
-        <td class="text">{{ r.ds.source }}</td>
-        <td>{{ r.logs }}</td><td>{{ r.patterns }}</td><td>{{ r.runs }}</td>
+        <td class="text"><a href="/d/{{ r.ds.id }}/plan"><strong>{{ r.ds.name }}</strong></a></td>
         <td class="text">{{ r.ds.updated_at.strftime("%Y-%m-%d %H:%M") if r.ds.updated_at }}</td>
         <td class="text">
           <form class="inline-form" method="post" action="/datasets/{{ r.ds.id }}/duplicate"
@@ -28,29 +26,22 @@
     </tbody>
   </table>
   {% else %}
-  <p>No datasets yet. Start one below: it holds your log classes and logs, the products you cut, your saw lines, and the
-    sawing patterns and results.</p>
+  <p>No projects yet. Start one below.</p>
   {% endif %}
 </div>
 <div class="panel">
-  <h2>New dataset</h2>
+  <h2 style="margin-top:0">New project</h2>
   <form method="post" action="/datasets/new">
     <div class="form-grid">
-      <label class="field">Name <input name="name" placeholder="for example Ngome 2026" required></label>
+      <label class="field">Name <input name="name" placeholder="for example Ngome main line" required></label>
     </div>
-    <fieldset style="margin-top:.8rem"><legend>Start from</legend>
-      <label class="check"><input type="radio" name="start" value="example" checked> Example values: four thicknesses, four widths,
-        five log classes (18 to 42 cm) and one saw line, ready to change. Prices, log prices and kerfs are marked as placeholders
-        until you enter your own.</label>
-      <label class="check"><input type="radio" name="start" value="empty"> Empty: you enter every size, log class and saw line yourself.</label>
-    </fieldset>
+    <label class="check" style="margin-top:.6rem"><input type="checkbox" name="start" value="example"> Fill in example sizes, log classes and
+      a saw line to try it out (change them to your own afterwards)</label>
     <p style="margin-top:.8rem"><button type="submit">Create</button></p>
   </form>
-  <p class="help">Then, in order: log classes and logs, products and prices, the saw line, and the generator finds the best pattern
-    and recovery for every class.</p>
 </div>
 <details class="panel">
-  <summary>Import from a Simsaw 6 file (optional)</summary>
+  <summary>Import from a Simsaw 6 file</summary>
   <p class="help">Only if you have an old Simsaw .mdb file and want to bring its logs, products, machines and patterns across.
     Nothing else in the app needs Simsaw.</p>
   <form method="post" action="/datasets/import" enctype="multipart/form-data" class="inline-form">

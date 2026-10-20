@@ -71,6 +71,9 @@ class LogClass(Base):
     max_defect_core: Mapped[float] = mapped_column(Float, default=100.0)
     log_price: Mapped[float] = mapped_column(Float, default=0.0)        # R/m3
     log_price_placeholder: Mapped[bool] = mapped_column(Boolean, default=False)
+    # the planner's typical log for the class: sample logs are made from these when the class has no real logs
+    plan_length_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    plan_taper: Mapped[float | None] = mapped_column(Float, nullable=True)        # mm/m
     grades: Mapped[list["LogGrade"]] = relationship(secondary="log_class_grade", lazy="selectin")
 
 
@@ -93,6 +96,7 @@ class Log(Base):
     ovality: Mapped[float] = mapped_column(Float, default=1.0)
     defect_core_cm: Mapped[float] = mapped_column(Float, default=0.0)   # cm (not %)
     log_grade_id: Mapped[int | None] = mapped_column(ForeignKey("log_grade.id", ondelete="SET NULL"), nullable=True)
+    sample: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")   # made by the planner
 
 
 class LogGenerator(Base):

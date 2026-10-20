@@ -166,3 +166,35 @@ svg.diagram.drop-target { outline: 3px dashed var(--accent); }
 .login-box { max-width: 24rem; margin: 4rem auto; }
 .login-box label.field { margin-bottom: .8rem; }
 .login-box input { width: 100%; }
+
+/* planner */
+p.lead { font-size: 1.05rem; color: var(--ink); max-width: 60rem; margin: 0 0 1.2rem; }
+.step h2 { margin-top: 0; display: flex; align-items: center; gap: .6rem; }
+.step-no { display: inline-flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 1rem; }
+.step table.data input { width: 5.5rem; }
+.actions { display: flex; gap: .8rem; align-items: center; margin: 1.2rem 0 1.6rem; flex-wrap: wrap; }
+button.big, .button.big { font-size: 1.1rem; padding: .6rem 1.4rem; }
+.results-head { display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; margin-bottom: .8rem; }
+.class-card .drawing { flex: 0 1 26rem; min-width: 16rem; }
+.class-card .drawing svg { width: 100%; height: auto; }
+.pattern-code { font-size: 1.05rem; margin: 0 0 .8rem; }
+.pattern-code code { font-size: 1.1rem; background: var(--accent-soft); padding: .1rem .4rem; border-radius: 3px; margin-right: .8rem; }
+.figures { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: .8rem; }
+.figures > div { display: flex; flex-direction: column; }
+.big-figure { font-size: 1.7rem; font-weight: 700; color: var(--accent); }
+table.cut th { text-align: center; }
+details.more { position: relative; }
+details.more summary { list-style: none; cursor: pointer; padding: .3rem .6rem; border-radius: 4px; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: " ▾"; }
+details.more summary.active, details.more summary:hover { background: rgba(255,255,255,.18); }
+details.more .menu { position: absolute; z-index: 20; top: 2.1rem; left: 0; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: .5rem; min-width: 16rem; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+details.more .menu a { display: block; color: var(--ink); padding: .35rem .6rem; border-radius: 4px; }
+details.more .menu a:hover, details.more .menu a.active { background: var(--accent-soft); }
+details.more .menu .help { margin: .2rem .6rem .5rem; font-size: .8rem; }
+@media print {
+  .report .page { break-before: page; }
+  .class-card .drawing { flex-basis: 22rem; }
+}

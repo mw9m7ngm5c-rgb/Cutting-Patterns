@@ -331,8 +331,8 @@ def test_machine_form_saves_and_clears_kerf_placeholder(client):
 
 
 def test_dataset_new_duplicate_delete_from_the_web(client):
-    r = client.post("/datasets/new", data={"name": "Trial"}, follow_redirects=False)
-    new_id = int(r.headers["location"].rsplit("/", 1)[1])
+    r = client.post("/datasets/new", data={"name": "Trial", "start": "example"}, follow_redirects=False)
+    new_id = int(r.headers["location"].split("/")[2])
     r = client.post(f"/datasets/{new_id}/duplicate", data={"name": "Trial copy"}, follow_redirects=False)
     copy_id = int(r.headers["location"].rsplit("/", 1)[1])
     assert "Trial copy" in client.get("/").text

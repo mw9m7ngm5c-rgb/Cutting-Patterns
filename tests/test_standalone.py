@@ -33,12 +33,12 @@ CLASS = {"min_length_m": 1.8, "max_length_m": 6.6, "length_incr_m": 0.3, "min_ta
 
 def test_start_page_leads_with_a_new_dataset_and_keeps_simsaw_optional(client):
     page = client.get("/").text
-    assert page.index("New dataset") < page.index("Simsaw") and "<details" in page and "Empty" in page
+    assert page.index("New project") < page.index("Simsaw") and "<details" in page
 
 
 def test_an_empty_dataset_set_up_by_hand_gets_the_best_pattern_for_every_class(client):
     r = client.post("/datasets/new", data={"name": "Our mill", "start": "empty"}, follow_redirects=False)
-    ds = int(r.headers["location"].rsplit("/", 1)[1])
+    ds = int(r.headers["location"].split("/")[2])
     with client.db.session() as s:
         assert s.query(m.LogClass).filter_by(dataset_id=ds).count() == 0
         assert s.query(m.ProductionLine).filter_by(dataset_id=ds).count() == 0
@@ -98,7 +98,7 @@ def test_classes_with_logs_are_searched_on_their_own_logs(client):
 
 def test_all_classes_needs_classes(client):
     r = client.post("/datasets/new", data={"name": "Bare", "start": "empty"}, follow_redirects=False)
-    ds = int(r.headers["location"].rsplit("/", 1)[1])
+    ds = int(r.headers["location"].split("/")[2])
     client.post(f"/d/{ds}/machines/new", data={"name": "L"})
     with client.db.session() as s:
         line = s.query(m.ProductionLine).filter_by(dataset_id=ds).one().id

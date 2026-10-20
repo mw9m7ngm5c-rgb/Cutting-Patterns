@@ -162,7 +162,7 @@ def execute(db: Database, job_id: int, parallel: bool = True) -> None:
                                 "diameters_mm": res.diameters_mm, "length_m": res.length_m,
                                 "truncated": res.truncated, "seconds": round(time.time() - t0, 1),
                                 "log_nos": [g.no for g in logs] if p.get("mode") != "diameter" else []}}
-            elif job.kind == "classes":
+            elif job.kind in ("classes", "plan"):
                 classes = sorted(ds.log_classes, key=lambda cl: cl.no)
                 rows = []
                 for i, cl in enumerate(classes):
@@ -184,6 +184,16 @@ def execute(db: Database, job_id: int, parallel: bool = True) -> None:
                 if rows and all(r["problem"] for r in rows):
                     raise G.GeneratorError(rows[0]["problem"])
                 out = {"classes": rows, "meta": {"seconds": round(time.time() - t0, 1)}}
+                if job.kind == "plan" and not cancel.is_set():
+                    # the planner goes on: keep each class's best pattern and saw every log for the report
+                    save_best(s, job.dataset_id, p["line_id"], rows, replace=True)
+                    s.commit()
+                    progress("Sawing every log for the report", 0, 1)
+                    from . import runs
+                    run_id = runs.create_run(db, job.dataset_id, job.title, line_names=[p["line_name"]])
+                    runs.execute(db, run_id)
+                    out["run_id"] = run_id
+                out["meta"]["seconds"] = round(time.time() - t0, 1)
             else:
                 steps = G.diameter_chart(int(p["from_cm"]), int(p["to_cm"]), ds.logs, ds.products, line, ds.settings,
                                          lambda d: class_price(ds, d), obj, c, simulate=int(p.get("simulate", 24)),
@@ -212,6 +222,36 @@ def execute(db: Database, job_id: int, parallel: bool = True) -> None:
             s.commit()
         finally:
             _cancel.pop(job_id, None)
+
+
+def save_best(s, ds_id: int, line_id: int, rows: list[dict], replace: bool) -> tuple[int, list[str]]:
+    """Save the best pattern of each class row from an all-classes search on the line. Returns how many
+    were saved and the numbers of classes that no longer exist."""
+    from sqlalchemy import select
+    by_no = {c.no: c for c in s.scalars(select(m.LogClass).where(m.LogClass.dataset_id == ds_id))}
+    saved, missing = 0, []
+    for row in rows:
+        cl = by_no.get(row["no"])
+        if not row["ranked"]:
+            continue
+        if cl is None:
+            missing.append(str(row["no"]))
+            continue
+        old = s.scalars(select(m.SawPattern).where(m.SawPattern.line_id == line_id,
+                                                   m.SawPattern.log_class_id == cl.id)).all()
+        if replace:
+            for sp in old:
+                s.delete(sp)
+            s.flush()
+            n = 1
+        else:
+            n = max((sp.pattern_no for sp in old), default=0) + 1
+        best = row["ranked"][0]
+        s.add(m.SawPattern(dataset_id=ds_id, line_id=line_id, log_class_id=cl.id, pattern_no=n,
+                           primary=best["primary"], secondary=best["secondary"], source="generated"))
+        saved += 1
+    s.flush()
+    return saved, missing
 
 
 def start(db: Database, job_id: int, parallel: bool = True) -> threading.Thread:

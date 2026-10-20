@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}{{ ds.name }} · Planner{% endblock %}
+{% macro num(v) %}{{ "%g"|format(v) if v is number else (v if v is not none else "") }}{% endmacro %}
+{% block content %}
+<h1>{{ ds.name }}</h1>
+<p class="lead">Enter your saw line, the sizes you cut and your log classes. Then one button works out the best pattern for every
+  class, with a drawing of each pattern and a full report.</p>
+
+{% if plan.problems and plan.line is not none and request.method == "POST" %}
+<div class="error"><strong>Please check:</strong><ul>{% for p in plan.problems %}<li>{{ p }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<form method="post" action="/d/{{ ds.id }}/plan" id="plan-form">
+  {% set ln = plan.line %}
+  <section class="panel step">
+    <h2><span class="step-no">1</span> Your saw line</h2>
+    <div class="form-grid">
+      <label class="field">Name <input name="line_name" value="{{ ln.name if ln else '' }}" placeholder="for example Main line"></label>
+      <label class="field">Type
+        <select name="saw_type">{% for k, label in saw_types.items() %}
+          <option value="{{ k }}" {{ "selected" if ln and (ln.saw_type|int) == k }}>{{ label }}</option>{% endfor %}</select></label>
+      <label class="field">Headrig kerf <span class="unit">mm, the cut the first saw takes out</span>
+        <input name="primary_kerf" value="{{ num(ln.primary_kerf) if ln else '' }}" inputmode="decimal" placeholder="for example 4" required></label>
+      <label class="field">Gang saw kerf <span class="unit">mm, for the cuts through the cant</span>
+        <input name="secondary_kerf" value="{{ num(ln.secondary_kerf) if ln else '' }}" inputmode="decimal" placeholder="for example 3.5" required></label>
+      <label class="field">Edger blades <span class="unit">how many</span>
+        <input name="edger_blades" value="{{ ln.edger_blades if ln and ln.edger_blades is not none else '' }}" inputmode="numeric" placeholder="for example 2" required></label>
+      <label class="field">Edger kerf <span class="unit">mm</span>
+        <input name="edger_kerf" value="{{ num(ln.edger_kerf) if ln else '' }}" inputmode="decimal" placeholder="for example 5" required></label>
+      <label class="field">Fixed edger spacing <span class="unit">mm between blades; leave empty if the blades move</span>
+        <input name="edger_spacing" value="{{ ln.edger_spacing if ln else '' }}" placeholder="for example 107 160"></label>
+    </div>
+    <p class="help">Resaws, curve sawing, offsets and other machine details are on the <a href="/d/{{ ds.id }}/machines">Machines</a> page under More.</p>
+  </section>
+
+  <section class="panel step">
+    <h2><span class="step-no">2</span> The sizes you cut</h2>
+    <p class="help">Finished size is the board as sold. Green size is what the saw cuts, before drying and planing
+      (for example 38 finished is cut at 41).</p>
+    <div class="row">
+      {% for prefix, title, rows in [("th", "Thicknesses", plan.thicknesses), ("wd", "Widths", plan.widths)] %}
+      <div>
+        <h3>{{ title }}</h3>
+        <table class="data sizes" data-prefix="{{ prefix }}">
+          <thead><tr><th>Finished<span class="unit">mm</span></th><th>Green<span class="unit">mm</span></th><th></th></tr></thead>
+          <tbody>
+          {% for d, w in rows %}
+            <tr><td><input name="{{ prefix }}_dry" value="{{ num(d) }}" inputmode="decimal" size="5"></td>
+              <td><input name="{{ prefix }}_wet" value="{{ num(w) }}" inputmode="decimal" size="5"></td>
+              <td><button type="button" class="link-button remove" title="Remove">✕</button></td></tr>
+          {% endfor %}
+          {% for _ in range(3 if not rows else 0) %}
+            <tr><td><input name="{{ prefix }}_dry" inputmode="decimal" size="5"></td>
+              <td><input name="{{ prefix }}_wet" inputmode="decimal" size="5"></td>
+              <td><button type="button" class="link-button remove" title="Remove">✕</button></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <button type="button" class="secondary add-row">Add a {{ "thickness" if prefix == "th" else "width" }}</button>
+      </div>
+      {% endfor %}
+      <div class="grow">
+        <h3>Which sizes do you cut?</h3>
+        <p class="help">Tick each thickness and width you cut. The search only uses ticked sizes.</p>
+        <div id="cut-matrix"></div>
+        {% for t, w in plan.cut %}<input type="hidden" class="cut-initial" value="{{ num(t) }}x{{ num(w) }}">{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel step">
+    <h2><span class="step-no">3</span> Your log classes</h2>
+    <p class="help">Small-end diameter range of each class, and a typical log for it. If you have measured logs, put them on the
+      <a href="/d/{{ ds.id }}/logs">Logs</a> page and they are used instead.</p>
+    <table class="data classes">
+      <thead><tr><th>Class</th><th>Diameter from<span class="unit">cm</span></th><th>to<span class="unit">cm</span></th>
+        <th>Typical length<span class="unit">m</span></th><th>Taper<span class="unit">mm per m</span></th><th class="text">Logs</th><th></th></tr></thead>
+      <tbody>
+      {% for c in plan.classes %}
+        <tr><td class="no">{{ loop.index }}</td>
+          <td><input name="cl_from" value="{{ num(c.min_cm) }}" inputmode="decimal" size="5"></td>
+          <td><input name="cl_to" value="{{ num(c.max_cm) }}" inputmode="decimal" size="5"></td>
+          <td><input name="cl_length" value="{{ num(c.length_m) }}" inputmode="decimal" size="5"></td>
+          <td><input name="cl_taper" value="{{ num(c.taper) }}" inputmode="decimal" size="5"></td>
+          <td class="text help">{{ "%d measured logs"|format(c.real_logs) if c.real_logs else "sample logs" }}</td>
+          <td><button type="button" class="link-button remove" title="Remove">✕</button></td></tr>
+      {% endfor %}
+      {% for _ in range(3 if not plan.classes else 0) %}
+        <tr><td class="no">{{ loop.index }}</td>
+          <td><input name="cl_from" inputmode="decimal" size="5"></td><td><input name="cl_to" inputmode="decimal" size="5"></td>
+          <td><input name="cl_length" inputmode="decimal" size="5"></td><td><input name="cl_taper" inputmode="decimal" size="5"></td>
+          <td class="text help">sample logs</td><td><button type="button" class="link-button remove" title="Remove">✕</button></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" class="secondary add-row">Add a class</button>
+  </section>
+
+  <div class="actions">
+    <button type="submit" name="action" value="calculate" class="big">Work out the best patterns</button>
+    <button type="submit" name="action" value="save" class="secondary">Save without working out</button>
+  </div>
+</form>
+
+<section id="results">
+{% if job and job.status in ("running", "queued") %}
+  <div class="panel" id="live" data-job="{{ job.id }}">
+    <h2 style="margin-top:0">Working out the best patterns…</h2>
+    <p><strong id="stage">{{ job.stage or "starting" }}</strong></p>
+    <span class="progress" style="width: 24rem; max-width: 100%"><span id="bar" style="width:0%"></span></span> <span id="count"></span>
+    <p class="help">Usually under a minute per class. You can leave this page and come back.</p>
+  </div>
+{% elif job and job.status == "failed" %}
+  <div class="error">The calculation stopped: {{ job.message.split("\n")[0] }}</div>
+{% elif res %}
+  <div class="panel">
+    <div class="results-head">
+      <h2 style="margin:0">Best pattern for each class</h2>
+      <span class="help">{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at }} · {{ res.line.name }}</span>
+      <span style="flex:1"></span>
+      <a class="button" href="/d/{{ ds.id }}/plan/report?job={{ job.id }}">Full report</a>
+      {% if res.run %}<a class="button secondary" href="/d/{{ ds.id }}/reports/{{ res.run.id }}/excel">Excel</a>{% endif %}
+    </div>
+    {% include "_plan_summary.html" %}
+    <p class="help" style="margin-top:.6rem">How to read a pattern: <code>25/152/25</code> is the headrig taking a 25 mm board off each side
+      and leaving a 152 mm cant; <code>2*25 2*50 2*25</code> is the gang saw cutting that cant into two 25s, two 50s and two 25s.
+      The drawings show the same thing.</p>
+  </div>
+  {% for c in res.classes %}
+  <div class="panel class-card">
+    <h3 style="margin-top:0">Class {{ c.no }} · {{ "%g"|format(c.min_cm) }}–{{ "%g"|format(c.max_cm) }} cm</h3>
+    {% if not c.best %}
+      <p class="error">{{ c.problem or "No pattern fits these sizes and this saw line." }}</p>
+    {% else %}
+    <div class="row">
+      <div class="drawing">
+        {{ svg.diagram(c.diagram, labels=True) if c.diagram }}
+        <p class="help" style="text-align:center">Log {{ "%g"|format(c.log.sed_cm) }} cm × {{ "%g"|format(c.log.length_m) }} m, small end
+          (dashed) and large end. Grey bands are saw cuts.</p>
+      </div>
+      <div class="grow">
+        <p class="pattern-code"><span class="help">Headrig</span> <code>{{ c.best.primary }}</code>
+          <span class="help">Gang saw</span> <code>{{ c.best.secondary or "–" }}</code></p>
+        {% set ps = c.summary %}
+        <div class="figures">
+          <div><span class="big-figure">{{ (ps.dry_recovery if ps else c.best.dry_recovery)|pct }}</span><span class="help">recovery (finished timber ÷ log volume)</span></div>
+          <div><span class="big-figure">{{ (ps.boards_per_log if ps else c.best.boards_per_log)|num(1) }}</span><span class="help">boards per log</span></div>
+          {% if ps %}<div><span class="big-figure">{{ ps.logs }}</span><span class="help">{{ "sample logs" if c.sample else "logs" }} sawn</span></div>{% endif %}
+        </div>
+        {% if c.mix %}
+        <table class="data">
+          <thead><tr><th class="text">Board</th><th>Per log</th><th>Average length<span class="unit">m</span></th><th>Share of timber</th></tr></thead>
+          <tbody>{% for x in c.mix %}<tr><td class="text">{{ x.thickness|int }} × {{ x.width|int }}</td><td>{{ x.per_log|num(1) }}</td>
+            <td>{{ x.length|num(2) }}</td><td>{{ x.share|pct }}</td></tr>{% endfor %}</tbody>
+        </table>
+        {% endif %}
+        {% if c.others %}<p class="help">Close behind: {% for r in c.others %}<code>{{ r.primary }}</code> <code>{{ r.secondary }}</code> ({{ r.dry_recovery|pct }}){{ "; " if not loop.last }}{% endfor %}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% endif %}
+</section>
+
+<template id="size-row"><tr><td><input inputmode="decimal" size="5"></td><td><input inputmode="decimal" size="5"></td>
+  <td><button type="button" class="link-button remove" title="Remove">✕</button></td></tr></template>
+<template id="class-row"><tr><td class="no"></td><td><input name="cl_from" inputmode="decimal" size="5"></td><td><input name="cl_to" inputmode="decimal" size="5"></td>
+  <td><input name="cl_length" inputmode="decimal" size="5"></td><td><input name="cl_taper" inputmode="decimal" size="5"></td>
+  <td class="text help">sample logs</td><td><button type="button" class="link-button remove" title="Remove">✕</button></td></tr></template>
+{% endblock %}
+{% block scripts %}
+<script src="/static/plan.js"></script>
+{% endblock %}
