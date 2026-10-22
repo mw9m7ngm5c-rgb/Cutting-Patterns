@@ -1,0 +1,17 @@
+---
+// The THORPE TIMBERS wordmark. To use a logo file instead, put it in
+// public/images/ and set "logo" in src/data/site.json, e.g. "/images/logo.svg".
+import { site } from '../lib/site';
+interface Props { light?: boolean; class?: string }
+const { light = false, class: className = '' } = Astro.props;
+---
+{site.logo ? (
+  <img src={site.logo} alt={site.logoAlt} class={`h-10 w-auto ${className}`} height="40" />
+) : (
+  <span class={`inline-flex flex-col leading-none ${className}`}>
+    <span class={`font-serif text-xl font-semibold tracking-[0.14em] sm:text-2xl ${light ? 'text-cream' : 'text-forest-800'}`}>
+      THORPE&nbsp;TIMBERS
+    </span>
+    <span class={`mt-1 h-[3px] w-full rounded-full ${light ? 'bg-timber-400' : 'bg-timber-500'}`} aria-hidden="true"></span>
+  </span>
+)}

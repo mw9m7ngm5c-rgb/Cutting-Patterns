@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import ProductCard from '../components/ProductCard.astro';
+import CtaBand from '../components/CtaBand.astro';
+import products from '../data/products.json';
+---
+<BaseLayout
+  title="Products | Structural Timber, CCA Treated Poles, Pallet Timber & Firewood KZN"
+  description="Structural pine timber, pallet material, CCA treated gum poles (2.4 m and 3 m), furniture grade timber, decking, firewood, sawdust and wood shavings for animal bedding. Sawn in Ngome, KZN. Pricing on request."
+  preloadImage="bandsaw-breaking-down-log"
+>
+  <PageHero
+    image="bandsaw-breaking-down-log"
+    eyebrow="Our products"
+    heading="Timber products from our Ngome sawmill"
+    text="Plantation pine and eucalyptus, cut and treated for construction, packaging, farming and the home. All pricing is on request."
+  />
+
+  <section class="container-site py-12 lg:py-16" aria-label="Product list">
+    <nav aria-label="Jump to a product" class="-mx-1 mb-10 flex flex-wrap gap-2">
+      {products.items.map((p) => (
+        <a href={`#${p.id}`} class="rounded-full border border-forest-700/30 bg-white px-4 py-2 text-sm font-medium text-forest-800 hover:border-forest-700 hover:bg-forest-50">{p.name}</a>
+      ))}
+    </nav>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {products.items.map((p) => <ProductCard product={p} />)}
+    </div>
+  </section>
+
+  <CtaBand heading="Not sure what you need?" text="Tell us about your project and we'll recommend the right timber, size and quantity. Call, WhatsApp or email us." />
+</BaseLayout>

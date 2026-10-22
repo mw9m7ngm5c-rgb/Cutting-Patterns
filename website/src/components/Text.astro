@@ -1,0 +1,6 @@
+---
+// Shows a piece of content text, highlighting any [PLACEHOLDER: ...] parts.
+import { formatText } from '../lib/site';
+interface Props { text: string }
+---
+<Fragment set:html={formatText(Astro.props.text)} />

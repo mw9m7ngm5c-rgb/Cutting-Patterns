@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { links, site } from '../../lib/site';
+---
+<BaseLayout title="Thank you" description="Your enquiry has been sent to Thorpe Timbers." noindex>
+  <section class="container-site flex min-h-[60vh] flex-col items-center justify-center py-16 text-center">
+    <span class="inline-flex size-16 items-center justify-center rounded-full bg-forest-100 text-forest-700">
+      <Icon name="CircleCheck" class="size-9" />
+    </span>
+    <h1 class="mt-6 text-4xl font-semibold text-forest-800">Thank you, your enquiry has been sent</h1>
+    <p class="mt-4 max-w-xl text-lg text-stone">
+      We'll get back to you as soon as possible. If it's urgent, call us on
+      <a href={links.tel} class="font-semibold text-forest-700 underline">{site.contact.phoneDisplay}</a> or send a WhatsApp.
+    </p>
+    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+      <a href="/products/" class="btn btn-outline">Back to products</a>
+      <a href="/" class="btn btn-forest">Home</a>
+    </div>
+  </section>
+</BaseLayout>

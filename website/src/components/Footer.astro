@@ -1,0 +1,46 @@
+---
+import Wordmark from './Wordmark.astro';
+import Icon from './Icon.astro';
+import Text from './Text.astro';
+import ContactLinks from './ContactLinks.astro';
+import { nav, site } from '../lib/site';
+const year = new Date().getFullYear();
+---
+<footer class="bg-forest-950 text-forest-100">
+  <div class="container-site grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:py-16">
+    <div class="lg:col-span-2">
+      <a href="/" class="inline-block rounded" aria-label={`${site.name}, home`}><Wordmark light /></a>
+      <p class="mt-5 max-w-sm text-forest-100/85">{site.tagline}</p>
+      <p class="mt-4 flex items-start gap-2 text-sm text-forest-100/75">
+        <Icon name="MapPin" class="mt-0.5 size-4 shrink-0 text-timber-300" />
+        <span>{site.contact.locality}, {site.contact.region}, South Africa</span>
+      </p>
+    </div>
+
+    <nav aria-label="Footer">
+      <h2 class="font-sans text-sm font-semibold tracking-[0.12em] text-timber-300 uppercase">Quick links</h2>
+      <ul class="mt-4 space-y-2">
+        {nav.map((item) => (
+          <li><a href={item.href} class="text-cream underline-offset-4 hover:underline">{item.label}</a></li>
+        ))}
+        <li><a href="/contact/#enquiry" class="text-cream underline-offset-4 hover:underline">Get a quote</a></li>
+      </ul>
+    </nav>
+
+    <div>
+      <h2 class="font-sans text-sm font-semibold tracking-[0.12em] text-timber-300 uppercase">Contact</h2>
+      <div class="mt-4"><ContactLinks light /></div>
+      <p class="mt-3 flex items-start gap-3 text-sm text-forest-100/80">
+        <Icon name="Clock" class="mt-0.5 size-5 shrink-0 text-timber-300" />
+        <span><Text text={site.contact.tradingHours} /></span>
+      </p>
+    </div>
+  </div>
+
+  <div class="border-t border-white/10">
+    <div class="container-site flex flex-col gap-2 py-5 pb-24 text-sm text-forest-100/70 sm:flex-row sm:items-center sm:justify-between md:pb-5">
+      <p>© {year} {site.name}. All rights reserved.</p>
+      <a href="/credits/" class="underline-offset-4 hover:text-cream hover:underline">Photo credits</a>
+    </div>
+  </div>
+</footer>

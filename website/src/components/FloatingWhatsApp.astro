@@ -1,0 +1,13 @@
+---
+import Icon from './Icon.astro';
+import { links } from '../lib/site';
+---
+<a
+  href={links.whatsapp}
+  class="fixed right-4 bottom-4 z-40 inline-flex size-14 items-center justify-center rounded-full btn-whatsapp shadow-lg shadow-black/25 md:hidden"
+  target="_blank"
+  rel="noopener"
+  aria-label="Chat to us on WhatsApp (opens WhatsApp)"
+>
+  <Icon name="WhatsApp" class="size-7" />
+</a>
