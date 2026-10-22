@@ -24,7 +24,6 @@ const schema = {
   '@type': 'LocalBusiness',
   '@id': `${site.siteUrl}/#business`,
   name: site.name,
-  alternateName: site.formerName || undefined,
   description: site.tagline,
   url: site.siteUrl,
   image: ogImage,
@@ -32,7 +31,7 @@ const schema = {
   email: c.email,
   address: {
     '@type': 'PostalAddress',
-    streetAddress: isPlaceholder(c.address) ? undefined : c.address,
+    streetAddress: !c.address || isPlaceholder(c.address) ? undefined : c.address,
     addressLocality: c.locality,
     addressRegion: c.region,
     postalCode: c.postalCode || undefined,
@@ -51,7 +50,7 @@ const schema = {
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {(noindex || site.hideFromSearchEngines) && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content="#1b3a27" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />

@@ -1,12 +1,25 @@
 # Thorpe Timbers website
 
-The marketing website for Thorpe Timbers (formerly Ngomi Timbers), a family-owned sawmill
+The marketing website for Thorpe Timbers, a family-owned sawmill
 in Ngome, KwaZulu-Natal. It is a small, fast, static site: four pages (Home, About,
 Products, Contact), plus a thank-you page for the enquiry form and a photo credits page.
 
 It is built with [Astro](https://astro.build) and [Tailwind CSS](https://tailwindcss.com),
 and it is hosted free on [Netlify](https://www.netlify.com). There is no database. All the
 text lives in a few plain files you can edit.
+
+---
+
+## Before telling customers about the site
+
+The site is currently a **preview**:
+
+- [ ] Replace the 7 stock photos (see `IMAGES.md`). They were downloaded from stock
+      sites and are not licensed for use on a live business website.
+- [ ] Fill in the remaining `[PLACEHOLDER: ...]` items (`npm run placeholders`).
+- [ ] Set `"hideFromSearchEngines": false` in `src/data/site.json`. While it is `true`,
+      every page asks Google not to list it.
+- [ ] Connect `thorpetimbers.co.za` (section 5) and turn on form emails (section 4).
 
 ---
 
@@ -123,10 +136,12 @@ One-time setup:
 3. Netlify reads the settings from `netlify.toml` at the top of the repository (the site
    is in the `website` folder, build command `npm run build`, publish folder `dist`).
    Just click **Deploy**.
-4. Under **Site configuration → Change site name**, choose `thorpe-timbers` so the
-   address is `https://thorpe-timbers.netlify.app`. If you pick a different name, also
-   change `"siteUrl"` in `src/data/site.json` to match (it's used for Google and for
-   link previews on WhatsApp/Facebook).
+4. Under **Site configuration → Change site name**, choose `thorpetimbers`, so the
+   preview address is `https://thorpetimbers.netlify.app`.
+
+`"siteUrl"` in `src/data/site.json` is already set to `https://thorpetimbers.co.za`, the
+address the site will have once the domain is connected (section 5). Google and link
+previews use it.
 
 After that, every change committed to the repository's main branch publishes itself.
 
@@ -149,7 +164,7 @@ with a hidden "honeypot" field and Netlify's own spam filter. The free plan incl
 
 ## 5. Connecting a `.co.za` domain later
 
-1. Register the domain (e.g. `thorpetimbers.co.za`) with any South African registrar
+1. Register `thorpetimbers.co.za` with any South African registrar
    (e.g. Domains.co.za, Afrihost, Xneelo).
 2. In Netlify: **Domain management → Add a domain** → type the domain → **Verify**.
 3. Netlify shows the DNS records to add. Either:
@@ -160,8 +175,9 @@ with a hidden "honeypot" field and Netlify's own spam filter. The free plan incl
      Keep any existing email (`MX`) records if you use email on that domain.
 4. Wait for DNS to update (minutes to a day). Netlify then adds a free HTTPS certificate
    by itself.
-5. Change `"siteUrl"` in `src/data/site.json` to `https://www.thorpetimbers.co.za` (or
-   whichever is the main address) and commit.
+5. In Netlify, make `thorpetimbers.co.za` the **primary domain** (it then redirects
+   `www.` and the `.netlify.app` address to it). `"siteUrl"` in `src/data/site.json`
+   already matches; change it only if you choose `www.thorpetimbers.co.za` as primary.
 6. Optional: add the site to [Google Search Console](https://search.google.com/search-console)
    and submit `https://your-domain/sitemap.xml`, and link the website from the Google
    Business Profile.

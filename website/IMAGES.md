@@ -10,30 +10,32 @@ its columns in the same order. To swap a photo, see "Changing a photo" in README
 
 | File (in public/images/) | Used on | Source | Photographer / owner | Licence | Recommended size |
 | --- | --- | --- | --- | --- | --- |
-| log-yard-pine-logs | Home: hero banner; social sharing image | Supplied by Thorpe Timbers (original: my-photos/industrial-wood-working-factory-with-tree-trunks-ready-be-cut.jpg.avif) | To confirm | To confirm (see note 1) | 1920 × 1080 (landscape, at least 1600 wide) |
-| log-loader-at-log-yard | About: top banner | Supplied by Thorpe Timbers (original: my-photos/wood-processing-factory.jpg.avif) | To confirm | To confirm (see note 1) | 1920 × 800 (wide landscape) |
-| bandsaw-breaking-down-log | Home: intro section; Products: top banner | Supplied by Thorpe Timbers (original: my-photos/photo-4.jpg) | To confirm | To confirm (see note 1) | 1920 × 800 (wide landscape) |
-| stacked-sawn-pine-boards | Products and Home: Structural Timber card | Supplied by Thorpe Timbers (original: my-photos/photo-1.jpg) | To confirm | To confirm (see note 1) | 1200 × 800 (3:2) |
-| stacked-select-grade-boards | Products and Home: Furniture Grade Timber card | Supplied by Thorpe Timbers (original: my-photos/photo-3.jpg) | To confirm | To confirm (see note 1) | 1200 × 800 (3:2) |
-| table-saw-cutting-timber | About: family story | Supplied by Thorpe Timbers (original: my-photos/photo-2.jpg) | To confirm | To confirm (see note 1) | 1200 × 900 (4:3) |
-| logs-arriving-by-truck | About: Thorpe Timbers today | Supplied by Thorpe Timbers (original: my-photos/photo-5.webp) | To confirm | To confirm (see note 2) | 1600 × 1000 (16:10) |
+| log-yard-pine-logs | Home: hero banner; social sharing image | Stock photo, source unknown (original: my-photos/industrial-wood-working-factory-with-tree-trunks-ready-be-cut.jpg.avif) | Unknown | Not licensed: preview only (see note 1) | 1920 × 1080 (landscape, at least 1600 wide) |
+| log-loader-at-log-yard | About: top banner | Stock photo, source unknown (original: my-photos/wood-processing-factory.jpg.avif) | Unknown | Not licensed: preview only (see note 1) | 1920 × 800 (wide landscape) |
+| bandsaw-breaking-down-log | Home: intro section; Products: top banner | Stock photo, source unknown (original: my-photos/photo-4.jpg) | Unknown | Not licensed: preview only (see note 1) | 1920 × 800 (wide landscape) |
+| stacked-sawn-pine-boards | Products and Home: Structural Timber card | Stock photo, source unknown (original: my-photos/photo-1.jpg) | Unknown | Not licensed: preview only (see note 1) | 1200 × 800 (3:2) |
+| stacked-select-grade-boards | Products and Home: Furniture Grade Timber card | Stock photo, source unknown (original: my-photos/photo-3.jpg) | Unknown | Not licensed: preview only (see note 1) | 1200 × 800 (3:2) |
+| table-saw-cutting-timber | About: family story | Stock photo, source unknown (original: my-photos/photo-2.jpg) | Unknown | Not licensed: preview only (see note 1) | 1200 × 900 (4:3) |
+| logs-arriving-by-truck | About: Thorpe Timbers today | Stock photo, source unknown (original: my-photos/photo-5.webp) | Unknown | Not licensed: preview only (see notes 1 and 2) | 1600 × 1000 (16:10) |
 
 ### Notes
 
-1. **Please confirm we own or have licensed these photos.** The two `.avif` files have
-   file names in the style of a stock-photo library, and photos 1 to 4 are the exact
-   size of stock-library previews (540 or 612 pixels wide). If they were downloaded
-   from a stock site rather than taken at our mill, we need a licence before going live,
-   or they should be replaced with our own photos. All seven are also small (540 to
-   1000 pixels wide), so the full-width banners will look a little soft on large
-   screens. Photos of our own mill at 2000+ pixels wide will fix both issues.
+1. **Preview only: replace before going live.** All seven photos were downloaded from
+   stock sites (they look like Freepik / iStock previews), which need a paid licence
+   for business use. They are kept only while the site is a private preview, which is
+   also why `"hideFromSearchEngines"` is `true` in `src/data/site.json`. Replace each
+   with a photo of our own mill or a free Unsplash/Pexels photo (suggestions below),
+   then update its row. They are also small (540 to 1000 pixels wide), so the
+   full-width banners look a little soft on large screens.
 2. The truck photo shows a transport company's name on the trailer. If that is not our
    own haulier, or they would rather not appear, replace it.
 
 No photos were skipped: none of the supplied photos were blurry, badly lit or showed
 people's faces clearly.
 
-## Gaps: products with no photo yet
+## Suggested free replacements
+
+### Products with no photo yet
 
 These products currently show a "Photo coming soon" panel. Best option: a photo of our
 own product at the mill (1200 × 800, landscape). Stock photos could not be downloaded
@@ -48,6 +50,20 @@ plantation timber, no snow, no logos, no posed people) before using it.
 | Decking | https://unsplash.com/photos/a-wooden-deck-surrounded-by-trees-and-plants-h4r2V9fdf5Q | Unsplash | Shown on the photo page |
 | Firewood | https://www.pexels.com/photo/brown-fire-wood-170560/ or https://www.pexels.com/photo/pile-of-firewoods-235964/ | Pexels | Shown on the photo page |
 | Sawdust & Shavings | https://unsplash.com/photos/selective-photography-sawdust-on-plank-hdW4rZPHe2g, or choose from https://unsplash.com/s/photos/wood-shavings | Unsplash | Clem Onojeghuo (first link) |
+
+### Replacing the stock photos above
+
+Search these and pick South African-looking plantation scenes (pine/gum, no snow, no
+logos, no posed people), landscape, 1920 pixels wide or more:
+
+- Log yard / hero: https://unsplash.com/s/photos/log-yard and https://www.pexels.com/search/sawmill/
+- Sawmill machinery: https://unsplash.com/s/photos/sawmill
+- Stacked sawn timber: https://www.pexels.com/search/lumber/
+- Pine plantation: https://unsplash.com/s/photos/pine-plantation
+- Timber truck: https://www.pexels.com/search/logging%20truck/
+
+Download each one, put it in `my-photos/`, point the matching entry in
+`src/data/images.json` at it, and update its row in the first table.
 
 Both Unsplash and Pexels allow free commercial use without attribution, but we credit
 photographers on the Photo credits page anyway. When you add one of these, move its row

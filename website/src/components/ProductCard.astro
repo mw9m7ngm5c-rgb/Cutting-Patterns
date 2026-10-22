@@ -3,6 +3,7 @@
 import Photo from './Photo.astro';
 import Icon from './Icon.astro';
 import Text from './Text.astro';
+import { site } from '../lib/site';
 
 interface Props {
   product: {
@@ -51,7 +52,7 @@ const { product: p } = Astro.props;
     </ul>
 
     <div class="mt-auto pt-6">
-      <p class="mb-3 text-sm text-stone">Pricing on request.</p>
+      <p class="mb-3 text-sm text-stone">{site.orderNote}</p>
       <a href={`/contact/?product=${p.id}#enquiry`} class="btn btn-forest w-full">
         Enquire about this product <Icon name="ArrowRight" class="size-4" />
       </a>

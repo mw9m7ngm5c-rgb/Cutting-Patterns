@@ -1,25 +1,32 @@
 {
   "_help": "Company details used on every page. Edit the text between the quotes. Anything written as [PLACEHOLDER: ...] is shown highlighted on the site until you replace it.",
   "name": "Thorpe Timbers",
-  "formerName": "Ngomi Timbers",
   "tagline": "Quality South African timber from Ngome, KwaZulu-Natal. Family owned for over 80 years.",
-  "siteUrl": "https://thorpe-timbers.netlify.app",
+  "siteUrl": "https://thorpetimbers.co.za",
+  "_siteUrl_help": "The main web address. Used for Google, the sitemap and WhatsApp/Facebook link previews.",
+  "hideFromSearchEngines": true,
+  "_hideFromSearchEngines_help": "true = Google is asked not to list the site (use while it still has preview/stock photos). Set to false when it is ready for customers.",
   "logo": "",
   "logoAlt": "Thorpe Timbers",
+  "orderNote": "Pricing on request. Orders are collected from our mill in Ngome.",
   "contact": {
     "email": "clem@lowveldlumber.com",
     "phoneDisplay": "082 703 7179",
     "phoneInternational": "+27827037179",
     "whatsappNumber": "27827037179",
     "whatsappMessage": "Hello Thorpe Timbers, I'd like to enquire about your timber products.",
-    "address": "[PLACEHOLDER: physical address]",
+    "address": "",
+    "_address_help": "Street or farm address. Leave empty to show only the town and province.",
     "locality": "Ngome",
     "region": "KwaZulu-Natal",
     "postalCode": "",
     "country": "ZA",
-    "tradingHours": "[PLACEHOLDER: trading hours]",
-    "openingHoursSchema": [],
-    "_openingHoursSchema_help": "When trading hours are confirmed, fill in openingHoursSchema for Google, e.g. [\"Mo-Fr 07:00-16:30\", \"Sa 07:00-12:00\"]"
+    "tradingHours": "Mon–Fri 07:00–16:30, Sat 07:00–12:00. Closed Sundays and public holidays.",
+    "openingHoursSchema": [
+      "Mo-Fr 07:00-16:30",
+      "Sa 07:00-12:00"
+    ],
+    "_openingHoursSchema_help": "Trading hours in Google's format; keep in step with tradingHours, e.g. [\"Mo-Fr 07:00-16:30\", \"Sa 07:00-12:00\"]"
   },
   "map": {
     "embedUrl": "",

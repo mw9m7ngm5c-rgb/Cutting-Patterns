@@ -7,4 +7,4 @@ Our family has been part of the South African timber industry for more than 80 y
 
 That experience, in how to grade a log, how to set up a saw line and how to keep customers coming back year after year, is now behind Thorpe Timbers.
 
-[PLACEHOLDER: founder name, number of generations, key milestones]
+Today the fourth generation of the family carries that work forward in Ngome.
