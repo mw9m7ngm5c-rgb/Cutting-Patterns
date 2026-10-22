@@ -1,0 +1,40 @@
+{
+  "_help": "Company details used on every page. Edit the text between the quotes. Anything written as [PLACEHOLDER: ...] is shown highlighted on the site until you replace it.",
+  "name": "Thorpe Timbers",
+  "formerName": "Ngomi Timbers",
+  "tagline": "Quality South African timber from Ngome, KwaZulu-Natal. Family owned for over 80 years.",
+  "siteUrl": "https://thorpe-timbers.netlify.app",
+  "logo": "",
+  "logoAlt": "Thorpe Timbers",
+  "contact": {
+    "email": "clem@lowveldlumber.com",
+    "phoneDisplay": "082 703 7179",
+    "phoneInternational": "+27827037179",
+    "whatsappNumber": "27827037179",
+    "whatsappMessage": "Hello Thorpe Timbers, I'd like to enquire about your timber products.",
+    "address": "[PLACEHOLDER: physical address]",
+    "locality": "Ngome",
+    "region": "KwaZulu-Natal",
+    "postalCode": "",
+    "country": "ZA",
+    "tradingHours": "[PLACEHOLDER: trading hours]",
+    "openingHoursSchema": [],
+    "_openingHoursSchema_help": "When trading hours are confirmed, fill in openingHoursSchema for Google, e.g. [\"Mo-Fr 07:00-16:30\", \"Sa 07:00-12:00\"]"
+  },
+  "map": {
+    "embedUrl": "",
+    "_embedUrl_help": "Paste the src=\"...\" value from Google Maps → Share → Embed a map. Leave empty to use the search below.",
+    "query": "Thorpe Timbers, Ngome, KwaZulu-Natal"
+  },
+  "seo": {
+    "keywords": [
+      "sawmill KZN",
+      "structural timber KwaZulu-Natal",
+      "CCA treated poles KZN",
+      "pallet timber South Africa",
+      "firewood Vryheid",
+      "wood shavings animal bedding KZN"
+    ],
+    "ogImage": "/images/og-image.jpg"
+  }
+}

@@ -2,3 +2,5 @@ node_modules/
 dist/
 .astro/
 .DS_Store
+# The repo root ignores data/ folders (app database); the site content must be kept.
+!src/data/

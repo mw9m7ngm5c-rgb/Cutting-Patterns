@@ -1,0 +1,40 @@
+{
+  "_help": "Every photo on the site. 'source' is the original file (inside my-photos/ or downloads/). After adding or changing a photo here, run: npm run images. Credits for each photo are in IMAGES.md.",
+  "images": [
+    {
+      "name": "log-yard-pine-logs",
+      "source": "my-photos/industrial-wood-working-factory-with-tree-trunks-ready-be-cut.jpg.avif",
+      "alt": "Stacks of debarked pine logs in a sunny sawmill log yard"
+    },
+    {
+      "name": "log-loader-at-log-yard",
+      "source": "my-photos/wood-processing-factory.jpg.avif",
+      "alt": "A log loader lifting logs onto a large stack of cut logs at a log yard"
+    },
+    {
+      "name": "stacked-sawn-pine-boards",
+      "source": "my-photos/photo-1.jpg",
+      "alt": "Freshly sawn pine boards stacked with spacers to air-dry"
+    },
+    {
+      "name": "table-saw-cutting-timber",
+      "source": "my-photos/photo-2.jpg",
+      "alt": "A block of timber being cut on a saw bench, with sawdust on the table"
+    },
+    {
+      "name": "stacked-select-grade-boards",
+      "source": "my-photos/photo-3.jpg",
+      "alt": "Close-up of the ends of neatly stacked select-grade timber boards"
+    },
+    {
+      "name": "bandsaw-breaking-down-log",
+      "source": "my-photos/photo-4.jpg",
+      "alt": "A bark-covered log being sawn on a sawmill bandsaw carriage"
+    },
+    {
+      "name": "logs-arriving-by-truck",
+      "source": "my-photos/photo-5.webp",
+      "alt": "A timber truck loaded with pine logs being offloaded by crane at the mill"
+    }
+  ]
+}
