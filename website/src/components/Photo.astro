@@ -1,0 +1,39 @@
+---
+// A responsive WebP photo from images.json, or a "photo coming soon" panel
+// when no photo has been chosen yet (image name left empty).
+import { getImage } from '../lib/site';
+import Icon from './Icon.astro';
+
+interface Props {
+  name: string;
+  sizes?: string;
+  class?: string;
+  priority?: boolean;
+  label?: string;
+}
+const { name, sizes = '100vw', class: className = '', priority = false, label = '' } = Astro.props;
+const img = getImage(name);
+---
+{img ? (
+  <img
+    src={img.src}
+    srcset={img.srcset}
+    sizes={sizes}
+    width={img.width}
+    height={img.height}
+    alt={img.alt}
+    class={`object-cover ${className}`}
+    loading={priority ? 'eager' : 'lazy'}
+    decoding={priority ? 'sync' : 'async'}
+    fetchpriority={priority ? 'high' : undefined}
+  />
+) : (
+  <div
+    class={`flex flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(100deg,var(--color-timber-200)_0_14px,var(--color-timber-100)_14px_30px)] text-timber-800 ${className}`}
+    role="img"
+    aria-label={label ? `${label}: photo coming soon` : 'Photo coming soon'}
+  >
+    <Icon name="Camera" class="size-8 opacity-70" />
+    <span class="rounded bg-cream/90 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase">Photo coming soon</span>
+  </div>
+)}

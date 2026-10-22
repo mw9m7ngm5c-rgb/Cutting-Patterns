@@ -1,5 +1,7 @@
 # Sawing pattern simulator and generator
 
+> The Thorpe Timbers marketing website is in [`website/`](website/README.md) (separate from this app).
+
 Thorpe Timbers (Ngome). Tells the mill which cutting pattern to run for each log diameter class, and what recovery and product mix to expect.
 
 Stand-alone: runs in any browser (Windows, Mac, tablet) from a cloud server or an office computer, and needs no other

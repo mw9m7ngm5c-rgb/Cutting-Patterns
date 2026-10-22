@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Photo from '../components/Photo.astro';
+import Icon from '../components/Icon.astro';
+import Text from '../components/Text.astro';
+import CtaBand from '../components/CtaBand.astro';
+import about from '../data/about.json';
+import { formatText } from '../lib/site';
+import { compiledContent } from '../content/family-story.md';
+
+// Highlight [PLACEHOLDER: ...] text inside the family story too.
+const story = (await compiledContent()).replace(/\[PLACEHOLDER[^\]]*\]/g, (m) => formatText(m));
+---
+<BaseLayout
+  title="About Us | Family Sawmill in Ngome, KZN Since the 1940s"
+  description="Thorpe Timbers is a family-owned plantation pine and eucalyptus sawmill in Ngome, KwaZulu-Natal, backed by more than 80 years in the South African timber industry."
+  preloadImage={about.heroImage}
+>
+  <PageHero image={about.heroImage} eyebrow="About us" heading={about.heroHeading} text={about.heroText} />
+
+  <!-- Family story -->
+  <section class="container-site grid gap-10 py-16 lg:grid-cols-[1fr_1.1fr] lg:gap-16 lg:py-24">
+    <div>
+      <p class="eyebrow text-timber-700">Our family story</p>
+      <h2 class="mt-2 text-3xl font-semibold text-forest-800 sm:text-4xl">Over 80 years in South African timber</h2>
+      <div class="prose-story mt-6 text-lg leading-relaxed" set:html={story} />
+    </div>
+    <Photo name="table-saw-cutting-timber" sizes="(min-width: 1024px) 600px, 100vw" class="aspect-[4/3] w-full self-center rounded-lg" />
+  </section>
+
+  <!-- Today -->
+  <section class="bg-white py-16 lg:py-24">
+    <div class="container-site grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <Photo name={about.today.image} sizes="(min-width: 1024px) 600px, 100vw" class="order-last aspect-[16/10] w-full rounded-lg lg:order-first" />
+      <div>
+        <p class="eyebrow text-timber-700">Ngome, KwaZulu-Natal</p>
+        <h2 class="mt-2 text-3xl font-semibold text-forest-800 sm:text-4xl">{about.today.heading}</h2>
+        <div class="mt-6 space-y-4 text-lg leading-relaxed">
+          {about.today.paragraphs.map((p) => <p><Text text={p} /></p>)}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Values -->
+  <section class="bg-forest-900 py-16 text-cream lg:py-24" aria-labelledby="values-heading">
+    <div class="container-site">
+      <p class="eyebrow text-timber-300">What we stand for</p>
+      <h2 id="values-heading" class="mt-2 text-3xl font-semibold sm:text-4xl">Our values</h2>
+      <ul class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+        {about.values.map((v) => (
+          <li class="rounded-lg border border-white/10 bg-white/5 p-6">
+            <span class="inline-flex size-12 items-center justify-center rounded-full bg-timber-400 text-forest-950">
+              <Icon name={v.icon} class="size-6" />
+            </span>
+            <h3 class="mt-4 text-xl font-semibold">{v.title}</h3>
+            <p class="mt-2 text-forest-100">{v.text}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section class="container-site py-16 lg:py-24" aria-labelledby="timeline-heading">
+    <p class="eyebrow text-timber-700">Our history</p>
+    <h2 id="timeline-heading" class="mt-2 text-3xl font-semibold text-forest-800 sm:text-4xl">From the 1940s to today</h2>
+    <ol class="relative mt-10 space-y-10 border-l-2 border-timber-300 pl-8 md:mx-auto md:max-w-3xl">
+      {about.timeline.map((m) => (
+        <li class="relative">
+          <span class="absolute top-1 -left-[2.6rem] size-5 rounded-full border-4 border-cream bg-timber-500 ring-2 ring-timber-300" aria-hidden="true"></span>
+          <p class="font-serif text-2xl font-semibold text-timber-700"><Text text={m.year} /></p>
+          <h3 class="mt-1 text-xl font-semibold text-forest-800">{m.title}</h3>
+          <p class="mt-2 text-stone"><Text text={m.text} /></p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <CtaBand />
+</BaseLayout>

@@ -1,0 +1,55 @@
+{
+  "hero": {
+    "eyebrow": "Sawmill · Ngome, KwaZulu-Natal",
+    "headline": "Quality South African Timber. Family Owned for Over 80 Years.",
+    "subheading": "Plantation pine and eucalyptus, sawn and treated in Ngome for builders, pallet makers, farmers and homeowners across KZN.",
+    "image": "log-yard-pine-logs",
+    "primaryButton": {
+      "label": "View Our Products",
+      "href": "/products/"
+    },
+    "secondaryButton": {
+      "label": "Get a Quote",
+      "href": "/contact/#enquiry"
+    }
+  },
+  "intro": {
+    "heading": "Timber know-how, four generations deep",
+    "text": "Thorpe Timbers is a family-owned sawmill in Ngome, northern KwaZulu-Natal. Our family has worked in the South African timber industry since the 1940s, and four generations on we bring that experience to every log we cut, from structural pine for roof trusses to treated gum poles, pallet material, firewood and shavings.",
+    "image": "bandsaw-breaking-down-log",
+    "link": {
+      "label": "Read our story",
+      "href": "/about/"
+    }
+  },
+  "trustPoints": [
+    {
+      "icon": "Award",
+      "title": "80+ years in timber",
+      "text": "In the industry since the 1940s"
+    },
+    {
+      "icon": "Users",
+      "title": "Family owned",
+      "text": "Run by the family, not a corporate"
+    },
+    {
+      "icon": "TreePine",
+      "title": "Sustainably sourced",
+      "text": "Plantation pine and eucalyptus"
+    },
+    {
+      "icon": "MapPin",
+      "title": "Based in KwaZulu-Natal",
+      "text": "Milled in Ngome, KZN"
+    }
+  ],
+  "products": {
+    "heading": "What we produce",
+    "text": "From construction timber to by-products, we make full use of every log. All pricing is on request."
+  },
+  "cta": {
+    "heading": "Need timber? Let's talk.",
+    "text": "Call, email or WhatsApp us for a quote. Tell us what you need and how much, and we'll come back to you quickly."
+  }
+}

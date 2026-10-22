@@ -1,0 +1,23 @@
+---
+// Phone, email and WhatsApp as a list of links. Used in the footer and contact page.
+import Icon from './Icon.astro';
+import { links, site } from '../lib/site';
+interface Props { light?: boolean }
+const { light = false } = Astro.props;
+const iconClass = `size-5 shrink-0 ${light ? 'text-timber-300' : 'text-timber-600'}`;
+const linkClass = `underline-offset-4 hover:underline ${light ? 'text-cream' : 'text-forest-800'}`;
+---
+<ul class="space-y-3">
+  <li class="flex items-center gap-3">
+    <Icon name="Phone" class={iconClass} />
+    <a href={links.tel} class={linkClass}>{site.contact.phoneDisplay}</a>
+  </li>
+  <li class="flex items-center gap-3">
+    <Icon name="WhatsApp" class={iconClass} />
+    <a href={links.whatsapp} class={linkClass} target="_blank" rel="noopener">WhatsApp {site.contact.phoneDisplay}</a>
+  </li>
+  <li class="flex items-center gap-3">
+    <Icon name="Mail" class={iconClass} />
+    <a href={links.mailto} class={`${linkClass} break-all`}>{site.contact.email}</a>
+  </li>
+</ul>

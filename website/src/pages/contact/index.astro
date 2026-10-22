@@ -1,0 +1,130 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
+import Text from '../../components/Text.astro';
+import ContactLinks from '../../components/ContactLinks.astro';
+import products from '../../data/products.json';
+import { links, site } from '../../lib/site';
+
+const field = 'mt-1 block w-full rounded-md border border-stone/40 bg-white px-3 py-3 text-base text-charcoal shadow-sm focus:border-forest-600 focus:ring-2 focus:ring-forest-600/30 focus:outline-none';
+const label = 'block font-medium text-charcoal';
+---
+<BaseLayout
+  title="Contact Us | Timber Quotes from Our Ngome Sawmill, KZN"
+  description="Get a quote for structural timber, CCA treated poles, pallet timber, firewood or shavings. Call 082 703 7179, WhatsApp us or send an enquiry to Thorpe Timbers in Ngome, KwaZulu-Natal."
+>
+  <section class="bg-forest-900 text-cream">
+    <div class="container-site py-12 sm:py-16">
+      <p class="eyebrow text-timber-300">Contact us</p>
+      <h1 class="mt-3 text-4xl font-semibold sm:text-5xl">Get in touch or request a quote</h1>
+      <p class="mt-4 max-w-2xl text-lg text-forest-100">Call, WhatsApp or email us, or send the enquiry form below. {site.orderNote}</p>
+    </div>
+  </section>
+
+  <section class="container-site grid gap-10 py-12 lg:grid-cols-[22rem_1fr] lg:gap-14 lg:py-16">
+    <!-- Contact details -->
+    <aside aria-labelledby="details-heading">
+      <h2 id="details-heading" class="text-2xl font-semibold text-forest-800">Contact details</h2>
+      <div class="mt-5 text-lg"><ContactLinks /></div>
+      <dl class="mt-6 space-y-4 border-t border-forest-900/10 pt-6">
+        <div class="flex gap-3">
+          <dt><Icon name="MapPin" class="mt-0.5 size-5 text-timber-600" /><span class="sr-only">Address</span></dt>
+          <dd>{site.contact.address && <><Text text={site.contact.address} /><br /></>}{site.contact.locality}, {site.contact.region}</dd>
+        </div>
+        <div class="flex gap-3">
+          <dt><Icon name="Clock" class="mt-0.5 size-5 text-timber-600" /><span class="sr-only">Trading hours</span></dt>
+          <dd><Text text={site.contact.tradingHours} /></dd>
+        </div>
+      </dl>
+      <div class="mt-8 grid gap-3">
+        <a href={links.tel} class="btn btn-forest"><Icon name="Phone" /> Call {site.contact.phoneDisplay}</a>
+        <a href={links.whatsapp} class="btn btn-whatsapp" target="_blank" rel="noopener"><Icon name="WhatsApp" /> Chat on WhatsApp</a>
+      </div>
+    </aside>
+
+    <!-- Enquiry form (handled by Netlify Forms) -->
+    <div id="enquiry" class="scroll-mt-24 rounded-lg border border-forest-900/10 bg-white p-5 shadow-sm sm:p-8">
+      <h2 class="text-2xl font-semibold text-forest-800">Enquiry &amp; quote request</h2>
+      <p class="mt-2 text-stone">Fields marked <span aria-hidden="true">*</span><span class="sr-only">with an asterisk</span> are required. We'll reply by phone or email.</p>
+
+      <form
+        name="enquiry"
+        method="POST"
+        action="/contact/thanks/"
+        data-netlify="true"
+        netlify-honeypot="bot-field"
+        class="mt-6 grid gap-5 sm:grid-cols-2"
+      >
+        <input type="hidden" name="form-name" value="enquiry" />
+        <p class="hidden" aria-hidden="true">
+          <label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+        </p>
+
+        <div>
+          <label for="f-name" class={label}>Name <span aria-hidden="true">*</span></label>
+          <input id="f-name" name="name" type="text" required autocomplete="name" class={field} />
+        </div>
+        <div>
+          <label for="f-company" class={label}>Company <span class="font-normal text-stone">(optional)</span></label>
+          <input id="f-company" name="company" type="text" autocomplete="organization" class={field} />
+        </div>
+        <div>
+          <label for="f-phone" class={label}>Phone <span aria-hidden="true">*</span></label>
+          <input id="f-phone" name="phone" type="tel" required autocomplete="tel" inputmode="tel" class={field} />
+        </div>
+        <div>
+          <label for="f-email" class={label}>Email <span aria-hidden="true">*</span></label>
+          <input id="f-email" name="email" type="email" required autocomplete="email" class={field} />
+        </div>
+        <div class="sm:col-span-2">
+          <label for="f-product" class={label}>Product of interest</label>
+          <select id="f-product" name="product" class={field}>
+            <option value="">Please choose…</option>
+            {products.items.map((p) => <option value={p.name} data-id={p.id}>{p.name}</option>)}
+            <option value="Other / not sure">Other / not sure</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label for="f-notes" class={label}>Quantity and notes</label>
+          <textarea id="f-notes" name="notes" rows="5" class={field} placeholder="e.g. sizes, quantity and when you would like to collect"></textarea>
+        </div>
+        <div class="sm:col-span-2">
+          <button type="submit" class="btn btn-primary w-full sm:w-auto">Send enquiry <Icon name="Send" class="size-4" /></button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Map -->
+  <section class="bg-sand py-12 lg:py-16" aria-labelledby="map-heading">
+    <div class="container-site">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="map-heading" class="text-2xl font-semibold text-forest-800 sm:text-3xl">Find us</h2>
+          <p class="mt-1 text-stone">{site.contact.locality}, {site.contact.region}</p>
+        </div>
+        <a href={links.directions} class="btn btn-forest" target="_blank" rel="noopener"><Icon name="Navigation" /> Get Directions</a>
+      </div>
+      <div class="mt-6 aspect-[4/3] w-full overflow-hidden rounded-lg border border-forest-900/10 bg-forest-50 sm:aspect-[16/9] lg:aspect-[21/9]">
+        <iframe
+          src={links.mapEmbed}
+          title={`Map showing ${site.name} in ${site.contact.locality}, ${site.contact.region}`}
+          class="h-full w-full border-0"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // Pre-select the product when arriving from "Enquire about this product".
+  const id = new URLSearchParams(location.search).get('product');
+  const select = document.getElementById('f-product') as HTMLSelectElement | null;
+  if (id && select) {
+    const option = select.querySelector<HTMLOptionElement>(`option[data-id="${CSS.escape(id)}"]`);
+    if (option) option.selected = true;
+  }
+</script>

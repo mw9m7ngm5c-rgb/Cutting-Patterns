@@ -1,0 +1,67 @@
+{
+  "heroImage": "log-loader-at-log-yard",
+  "heroHeading": "A family in timber since the 1940s",
+  "heroText": "More than 80 years of sawmilling and pallet manufacturing experience, now behind Thorpe Timbers in Ngome.",
+  "today": {
+    "heading": "Thorpe Timbers today",
+    "image": "logs-arriving-by-truck",
+    "paragraphs": [
+      "Thorpe Timbers is a plantation pine and eucalyptus sawmill in Ngome, KwaZulu-Natal. We produce structural timber, pallet material and CCA treated poles, along with by-products such as firewood, sawdust and shavings, so that very little of each log goes to waste.",
+      "We are a growing team with growing capacity, and we are proud to provide local employment and to build long-term relationships with customers and suppliers across KZN."
+    ]
+  },
+  "values": [
+    {
+      "icon": "ShieldCheck",
+      "title": "Integrity",
+      "text": "Honest dealing and consistent quality."
+    },
+    {
+      "icon": "Hammer",
+      "title": "Craftsmanship",
+      "text": "Generations of timber know-how."
+    },
+    {
+      "icon": "Leaf",
+      "title": "Sustainability",
+      "text": "Timber from responsibly managed plantations and full use of every log."
+    },
+    {
+      "icon": "HeartHandshake",
+      "title": "Community",
+      "text": "Local employment and long-term relationships in KZN."
+    },
+    {
+      "icon": "Truck",
+      "title": "Reliability",
+      "text": "Dependable supply, with orders ready when we say they will be."
+    }
+  ],
+  "timeline": [
+    {
+      "year": "1940s",
+      "title": "The family enters the timber trade",
+      "text": "The first generation of the family begins working in the South African timber industry."
+    },
+    {
+      "year": "[PLACEHOLDER: year]",
+      "title": "Sawmilling grows",
+      "text": "[PLACEHOLDER: key milestone, e.g. first sawmill or expansion]"
+    },
+    {
+      "year": "[PLACEHOLDER: year]",
+      "title": "Pallet manufacturing",
+      "text": "[PLACEHOLDER: when and how the family began pallet manufacturing]"
+    },
+    {
+      "year": "[PLACEHOLDER: year]",
+      "title": "The Ngome mill",
+      "text": "[PLACEHOLDER: when the Ngome mill was established or acquired]"
+    },
+    {
+      "year": "Today",
+      "title": "Thorpe Timbers",
+      "text": "The fourth generation of the family runs Thorpe Timbers, a growing plantation pine and eucalyptus sawmill serving customers across KwaZulu-Natal."
+    }
+  ]
+}

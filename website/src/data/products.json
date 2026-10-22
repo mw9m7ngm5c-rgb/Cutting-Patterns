@@ -1,0 +1,121 @@
+{
+  "_help": "One entry per product. 'id' is used in web links (no spaces). 'image' is a name from images.json, or \"\" to show a 'photo coming soon' panel. The order here is the order on the site. No prices: all pricing is on request.",
+  "items": [
+    {
+      "id": "structural-timber",
+      "name": "Structural Timber",
+      "image": "stacked-sawn-pine-boards",
+      "summary": "South African pine for roof trusses, framing and general construction.",
+      "applications": [
+        "Roof trusses",
+        "Wall and floor framing",
+        "Purlins and battens",
+        "General construction"
+      ],
+      "sizes": [
+        "Grades and sizes on request"
+      ],
+      "certificationBadge": ""
+    },
+    {
+      "id": "pallet-material",
+      "name": "Pallet Material",
+      "image": "",
+      "summary": "Cut-to-size pallet boards and bearers for pallet manufacturers.",
+      "applications": [
+        "Pallet deck boards",
+        "Bearers and stringers",
+        "Crates and packaging"
+      ],
+      "sizes": [
+        "Cut to your specification"
+      ],
+      "certificationBadge": ""
+    },
+    {
+      "id": "cca-treated-poles",
+      "name": "CCA Treated Poles",
+      "image": "",
+      "summary": "Treated gum (eucalyptus) poles for fencing, building, agriculture and vineyards.",
+      "applications": [
+        "Fencing",
+        "Building and carports",
+        "Agriculture",
+        "Vineyards and orchards"
+      ],
+      "sizes": [
+        "Standard lengths 2.4 m and 3 m",
+        "[PLACEHOLDER: diameters]"
+      ],
+      "certificationBadge": "",
+      "_certificationBadge_help": "Only fill this in once the poles are certified, e.g. \"Certified to SANS 457-3\". While empty, no badge is shown."
+    },
+    {
+      "id": "furniture-grade-timber",
+      "name": "Furniture Grade Timber",
+      "image": "stacked-select-grade-boards",
+      "summary": "Clear, select-grade boards for furniture makers and joinery.",
+      "applications": [
+        "Furniture",
+        "Joinery",
+        "Shelving",
+        "Shopfitting"
+      ],
+      "sizes": [
+        "Species, grades and sizes on request"
+      ],
+      "certificationBadge": ""
+    },
+    {
+      "id": "decking",
+      "name": "Decking",
+      "image": "",
+      "summary": "Timber decking boards for patios, walkways and outdoor living.",
+      "applications": [
+        "Patios and decks",
+        "Walkways and boardwalks",
+        "Pool surrounds"
+      ],
+      "sizes": [
+        "[PLACEHOLDER: species]",
+        "[PLACEHOLDER: treatment]",
+        "[PLACEHOLDER: profiles and sizes]"
+      ],
+      "certificationBadge": ""
+    },
+    {
+      "id": "firewood",
+      "name": "Firewood",
+      "image": "",
+      "summary": "Seasoned sawmill firewood and offcuts for homes, braais, lodges and restaurants.",
+      "applications": [
+        "Home fireplaces",
+        "Braais",
+        "Lodges and guesthouses",
+        "Restaurants"
+      ],
+      "sizes": [
+        "Bakkie loads",
+        "Bulk truck loads"
+      ],
+      "certificationBadge": ""
+    },
+    {
+      "id": "sawdust-and-shavings",
+      "name": "Sawdust & Shavings",
+      "image": "",
+      "summary": "Clean sawdust and wood shavings for animal bedding, mulch and biomass fuel.",
+      "applications": [
+        "Poultry bedding",
+        "Horse and stable bedding",
+        "Garden mulch",
+        "Biomass fuel"
+      ],
+      "sizes": [
+        "Bagged",
+        "Bulk loads"
+      ],
+      "certificationBadge": ""
+    }
+  ]
+}

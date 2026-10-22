@@ -1,0 +1,97 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Photo from '../components/Photo.astro';
+import Icon from '../components/Icon.astro';
+import Text from '../components/Text.astro';
+import CtaBand from '../components/CtaBand.astro';
+import home from '../data/home.json';
+import products from '../data/products.json';
+
+const { hero, intro, trustPoints, cta } = home;
+---
+<BaseLayout
+  title="Thorpe Timbers | Sawmill in KZN: Structural Timber, Poles & Pallet Timber"
+  description="Family-owned sawmill in Ngome, KwaZulu-Natal. Structural pine, pallet timber, CCA treated poles, firewood and wood shavings for animal bedding. 80+ years in timber. Get a quote."
+  preloadImage={hero.image}
+>
+  <!-- Hero -->
+  <section class="relative isolate overflow-hidden bg-forest-950 text-cream">
+    <Photo name={hero.image} priority class="absolute inset-0 -z-10 h-full w-full" />
+    <div class="absolute inset-0 -z-10 bg-gradient-to-t from-forest-950/95 via-forest-950/70 to-forest-950/40 md:bg-gradient-to-r md:from-forest-950/90 md:via-forest-950/65 md:to-forest-950/20" aria-hidden="true"></div>
+    <div class="container-site flex min-h-[34rem] flex-col justify-end py-14 sm:min-h-[38rem] md:justify-center lg:min-h-[42rem]">
+      <p class="eyebrow text-timber-300">{hero.eyebrow}</p>
+      <h1 class="mt-3 max-w-3xl text-4xl leading-[1.08] font-semibold sm:text-5xl lg:text-6xl">{hero.headline}</h1>
+      <p class="mt-5 max-w-xl text-lg text-forest-50/90">{hero.subheading}</p>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+        <a href={hero.primaryButton.href} class="btn btn-primary">{hero.primaryButton.label} <Icon name="ArrowRight" class="size-4" /></a>
+        <a href={hero.secondaryButton.href} class="btn btn-outline-light">{hero.secondaryButton.label}</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust points -->
+  <section aria-label="Why Thorpe Timbers" class="border-b border-timber-200 bg-sand">
+    <ul class="container-site grid grid-cols-2 gap-x-4 gap-y-6 py-8 lg:grid-cols-4 lg:py-10">
+      {trustPoints.map((t) => (
+        <li class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+          <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-forest-800 text-timber-300">
+            <Icon name={t.icon} class="size-5" />
+          </span>
+          <span>
+            <span class="block font-serif text-lg leading-tight font-semibold text-forest-800">{t.title}</span>
+            <span class="mt-1 block text-sm text-stone">{t.text}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <!-- Intro -->
+  <section class="container-site grid items-center gap-10 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24">
+    <div>
+      <p class="eyebrow text-timber-700">About us</p>
+      <h2 class="mt-2 text-3xl font-semibold text-forest-800 sm:text-4xl">{intro.heading}</h2>
+      <p class="mt-5 text-lg leading-relaxed"><Text text={intro.text} /></p>
+      <a href={intro.link.href} class="btn btn-outline mt-7">{intro.link.label} <Icon name="ArrowRight" class="size-4" /></a>
+    </div>
+    <div class="relative">
+      <div class="absolute -right-3 -bottom-3 hidden h-full w-full rounded-lg bg-timber-300 sm:block" aria-hidden="true"></div>
+      <Photo name={intro.image} sizes="(min-width: 1024px) 560px, 100vw" class="relative aspect-[4/3] w-full rounded-lg" />
+    </div>
+  </section>
+
+  <!-- Product categories -->
+  <section class="bg-white py-16 lg:py-24" aria-labelledby="products-heading">
+    <div class="container-site">
+      <div class="max-w-2xl">
+        <p class="eyebrow text-timber-700">Products</p>
+        <h2 id="products-heading" class="mt-2 text-3xl font-semibold text-forest-800 sm:text-4xl">{home.products.heading}</h2>
+        <p class="mt-4 text-lg text-stone">{home.products.text}</p>
+      </div>
+      <ul class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {products.items.map((p) => (
+          <li>
+            <a href={`/products/#${p.id}`} class="group flex h-full flex-col overflow-hidden rounded-lg border border-forest-900/10 bg-cream transition hover:-translate-y-0.5 hover:shadow-md">
+              <Photo name={p.image} label={p.name} sizes="(min-width: 1280px) 290px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" class="aspect-[16/10] w-full" />
+              <span class="flex flex-1 flex-col p-5">
+                <span class="font-serif text-xl font-semibold text-forest-800 group-hover:underline group-hover:decoration-timber-500 group-hover:underline-offset-4">{p.name}</span>
+                <span class="mt-2 text-sm text-stone">{p.summary}</span>
+                <span class="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-semibold text-timber-700">View details <Icon name="ArrowRight" class="size-4" /></span>
+              </span>
+            </a>
+          </li>
+        ))}
+        <li>
+          <a href="/contact/#enquiry" class="flex h-full min-h-56 flex-col justify-center rounded-lg bg-forest-800 p-6 text-cream hover:bg-forest-700">
+            <Icon name="ClipboardList" class="size-8 text-timber-300" />
+            <span class="mt-4 font-serif text-xl font-semibold">Need something specific?</span>
+            <span class="mt-2 text-sm text-forest-100">Custom sizes and bulk orders on request.</span>
+            <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-timber-300">Get a quote <Icon name="ArrowRight" class="size-4" /></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <CtaBand heading={cta.heading} text={cta.text} />
+</BaseLayout>

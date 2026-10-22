@@ -1,0 +1,62 @@
+{
+  "log-yard-pine-logs": {
+    "widths": [
+      400,
+      640,
+      740
+    ],
+    "width": 740,
+    "height": 494
+  },
+  "log-loader-at-log-yard": {
+    "widths": [
+      400,
+      640,
+      740
+    ],
+    "width": 740,
+    "height": 500
+  },
+  "stacked-sawn-pine-boards": {
+    "widths": [
+      400,
+      540
+    ],
+    "width": 540,
+    "height": 360
+  },
+  "table-saw-cutting-timber": {
+    "widths": [
+      400,
+      612
+    ],
+    "width": 612,
+    "height": 408
+  },
+  "stacked-select-grade-boards": {
+    "widths": [
+      400,
+      612
+    ],
+    "width": 612,
+    "height": 408
+  },
+  "bandsaw-breaking-down-log": {
+    "widths": [
+      400,
+      612
+    ],
+    "width": 612,
+    "height": 408
+  },
+  "logs-arriving-by-truck": {
+    "widths": [
+      400,
+      640,
+      960,
+      1000
+    ],
+    "width": 1000,
+    "height": 498
+  }
+}

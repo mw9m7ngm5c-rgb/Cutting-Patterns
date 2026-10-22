@@ -1,0 +1,22 @@
+---
+import Icon from './Icon.astro';
+import { links, site } from '../lib/site';
+interface Props { heading?: string; text?: string }
+const {
+  heading = "Need timber? Let's talk.",
+  text = "Call, email or WhatsApp us for a quote. Tell us what you need and how much, and we'll come back to you quickly.",
+} = Astro.props;
+---
+<section class="bg-forest-800 text-cream" aria-labelledby="cta-heading">
+  <div class="container-site grid gap-8 py-14 lg:grid-cols-[1fr_auto] lg:items-center lg:py-16">
+    <div>
+      <h2 id="cta-heading" class="text-3xl font-semibold sm:text-4xl">{heading}</h2>
+      <p class="mt-3 max-w-2xl text-lg text-forest-100">{text}</p>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+      <a href={links.tel} class="btn btn-primary"><Icon name="Phone" /> {site.contact.phoneDisplay}</a>
+      <a href={links.whatsapp} class="btn btn-whatsapp" target="_blank" rel="noopener"><Icon name="WhatsApp" /> WhatsApp</a>
+      <a href={links.mailto} class="btn btn-outline-light"><Icon name="Mail" /> Email us</a>
+    </div>
+  </div>
+</section>

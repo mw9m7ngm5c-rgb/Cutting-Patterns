@@ -1,0 +1,77 @@
+---
+import Wordmark from './Wordmark.astro';
+import Icon from './Icon.astro';
+import { nav, links, site } from '../lib/site';
+
+const path = Astro.url.pathname;
+const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+<header class="sticky top-0 z-40 border-b border-forest-900/10 bg-cream/95 backdrop-blur supports-[backdrop-filter]:bg-cream/85">
+  <div class="container-site flex h-16 items-center justify-between gap-4 md:h-[4.5rem]">
+    <a href="/" class="shrink-0 rounded" aria-label={`${site.name}, home`}>
+      <Wordmark />
+    </a>
+
+    <nav aria-label="Main" class="hidden md:block">
+      <ul class="flex items-center gap-1 lg:gap-2">
+        {nav.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
+              class="rounded px-3 py-2 font-medium text-charcoal hover:text-forest-700 aria-[current=page]:text-forest-700 aria-[current=page]:underline aria-[current=page]:decoration-timber-500 aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
+            >{item.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a href={links.tel} class="btn btn-forest min-h-11 px-3 sm:px-4" aria-label={`Call now on ${site.contact.phoneDisplay}`}>
+        <Icon name="Phone" class="size-5" />
+        <span class="hidden sm:inline">Call Now</span>
+      </a>
+      <button
+        type="button"
+        class="inline-flex size-11 items-center justify-center rounded-md text-forest-800 hover:bg-forest-50 md:hidden"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+        data-menu-toggle
+      >
+        <span class="sr-only">Menu</span>
+        <Icon name="Menu" class="size-6" />
+      </button>
+    </div>
+  </div>
+
+  <nav id="mobile-menu" aria-label="Main" class="hidden border-t border-forest-900/10 bg-cream md:hidden">
+    <ul class="container-site py-2">
+      {nav.map((item) => (
+        <li>
+          <a
+            href={item.href}
+            aria-current={isCurrent(item.href) ? 'page' : undefined}
+            class="block rounded px-2 py-3 text-lg font-medium text-charcoal aria-[current=page]:text-forest-700"
+          >{item.label}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const menu = document.getElementById('mobile-menu');
+  toggle?.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!open));
+    menu?.classList.toggle('hidden', open);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') {
+      toggle.setAttribute('aria-expanded', 'false');
+      menu?.classList.add('hidden');
+      toggle.focus();
+    }
+  });
+</script>

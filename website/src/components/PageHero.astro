@@ -1,0 +1,15 @@
+---
+// The photo banner at the top of the inner pages.
+import Photo from './Photo.astro';
+interface Props { image: string; eyebrow: string; heading: string; text?: string }
+const { image, eyebrow, heading, text } = Astro.props;
+---
+<section class="relative isolate overflow-hidden bg-forest-950 text-cream">
+  <Photo name={image} priority class="absolute inset-0 -z-10 h-full w-full" />
+  <div class="absolute inset-0 -z-10 bg-gradient-to-r from-forest-950/90 via-forest-950/70 to-forest-950/35" aria-hidden="true"></div>
+  <div class="container-site py-16 sm:py-20 lg:py-24">
+    <p class="eyebrow text-timber-300">{eyebrow}</p>
+    <h1 class="mt-3 max-w-3xl text-4xl font-semibold sm:text-5xl">{heading}</h1>
+    {text && <p class="mt-4 max-w-2xl text-lg text-forest-50/90">{text}</p>}
+  </div>
+</section>

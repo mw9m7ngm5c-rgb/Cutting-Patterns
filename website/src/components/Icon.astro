@@ -1,0 +1,21 @@
+---
+// Draws an icon from the Lucide set (https://lucide.dev/icons). Use the icon's
+// name in PascalCase, e.g. "Phone", "TreePine", "ShieldCheck".
+import * as icons from 'lucide-static';
+import { siWhatsapp } from 'simple-icons';
+
+interface Props { name: string; class?: string }
+const { name, class: className = 'size-5' } = Astro.props;
+
+let svg: string;
+if (name === 'WhatsApp') {
+  svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="${siWhatsapp.path}"/></svg>`;
+} else {
+  const raw = (icons as Record<string, string>)[name];
+  if (!raw) throw new Error(`Unknown icon "${name}"`);
+  // Drop the outer <svg>'s own size and class only (inner shapes keep theirs).
+  svg = raw.replace(/<svg[^>]*>/, (tag) => tag.replace(/\s(width|height|class)="[^"]*"/g, ''));
+}
+svg = svg.replace('<svg', `<svg class="${className}" aria-hidden="true" focusable="false"`);
+---
+<Fragment set:html={svg} />
